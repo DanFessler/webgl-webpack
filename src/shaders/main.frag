@@ -2,8 +2,12 @@
 // to pick one. mediump is a good default
 precision mediump float;
 
+varying highp vec2 v_texCoord;
+
 void main() {
   // gl_FragColor is a special variable a fragment shader
   // is responsible for setting
-  gl_FragColor = vec4(1, 0, 0.5, 1); // return redish-purple
+
+  gl_FragColor = vec4(v_texCoord, 0, 1); // return uv color
+  
 }

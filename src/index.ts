@@ -2,13 +2,15 @@ import "./index.css";
 import css from "./canvas.module.css";
 import vertShaderSrc from "./shaders/main.vert";
 import fragShaderSrc from "./shaders/main.frag";
+import { mat4, mat3 } from "gl-matrix";
+// const mat4 = require("gl-mat4");
 
 // Create canvas
 const canvasEl = document.createElement("canvas");
 canvasEl.className = css.appCanvas;
 document.getElementById("root").appendChild(canvasEl);
-canvasEl.width = 640;
-canvasEl.height = 480;
+canvasEl.width = 1440;
+canvasEl.height = 789;
 
 // Update canvas size on resize
 const resizer = new ResizeObserver(([element]) => {
@@ -17,17 +19,35 @@ const resizer = new ResizeObserver(([element]) => {
   // render();
 });
 
+resizer.observe(document.getElementById("root"));
+
 class Sprite {
   x: number = 0;
   y: number = 0;
   width: number = 0;
   height: number = 0;
+  vel: { x: number; y: number } = { x: 0, y: 0 };
+  angle: number = Math.random() * Math.PI * 2;
 
   constructor(x: number, y: number, width: number, height: number) {
     this.x = x;
     this.y = y;
     this.width = width;
     this.height = height;
+    this.vel = {
+      x: Math.sin(this.angle),
+      y: Math.cos(this.angle),
+    };
+  }
+
+  update() {
+    this.x += this.vel.x;
+    this.y += this.vel.y;
+
+    if (this.x < 0 || this.x > spritegl.canvas.width - this.width)
+      this.vel.x *= -1;
+    if (this.y < 0 || this.y > spritegl.canvas.height - this.height)
+      this.vel.y *= -1;
   }
 }
 
@@ -35,12 +55,15 @@ class main {
   canvas: HTMLCanvasElement;
   gl: WebGLRenderingContext;
   shaderProgram: WebGLProgram;
-  buffer: WebGLBuffer;
-  bufferLength: number;
+  posBuffer: WebGLBuffer;
+  uvBuffer: WebGLBuffer;
+  posBufferLength: number;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
-    this.gl = canvas.getContext("webgl");
+    this.gl = canvas.getContext("webgl", {
+      alpha: false,
+    });
 
     const vertShader = this.createShader(
       this.gl,
@@ -88,17 +111,27 @@ class main {
     gl.deleteProgram(program);
   }
 
-  setBuffer(positions: number[]) {
+  setBuffer(positions: number[], uvs?: number[]) {
     // create a bugger and put points in it
     const posBuffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, posBuffer);
     this.gl.bufferData(
       this.gl.ARRAY_BUFFER,
       new Float32Array(positions),
-      this.gl.STATIC_DRAW
+      this.gl.DYNAMIC_DRAW
     );
-    this.buffer = posBuffer;
-    this.bufferLength = positions.length;
+    this.posBuffer = posBuffer;
+    this.posBufferLength = positions.length;
+
+    const uvBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, uvBuffer);
+    this.gl.bufferData(
+      this.gl.ARRAY_BUFFER,
+      new Float32Array(uvs),
+      this.gl.DYNAMIC_DRAW
+    );
+
+    this.uvBuffer = uvBuffer;
   }
 
   draw() {
@@ -108,31 +141,56 @@ class main {
       "a_position"
     );
 
+    let uvAttribLocation = this.gl.getAttribLocation(
+      this.shaderProgram,
+      "a_texCoord"
+    );
+
+    const viewMatrix = mat4.create();
+    mat4.ortho(
+      viewMatrix,
+      0,
+      this.gl.canvas.clientWidth,
+      this.gl.canvas.clientHeight,
+      0,
+      0,
+      1
+    );
+    // mat4.translate(viewMatrix, viewMatrix, [100, 100, 0]);
+
+    // get matrix uniform location
+    let matrixUniformLocation = this.gl.getUniformLocation(
+      this.shaderProgram,
+      "u_viewMatrix"
+    );
+
+    // set uniform matrix
+    this.gl.uniformMatrix4fv(matrixUniformLocation, false, viewMatrix);
+
     // actually draw now
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
 
     // clear
     this.gl.clearColor(0, 0, 0, 0);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+    // this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
     this.gl.useProgram(this.shaderProgram);
 
+    // bind vert positions
     this.gl.enableVertexAttribArray(posAttribLocation);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer);
-    this.gl.vertexAttribPointer(
-      posAttribLocation,
-      2,
-      this.gl.FLOAT,
-      false,
-      0,
-      0
-    );
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.posBuffer);
+    this.gl.vertexAttribPointer(posAttribLocation, 2, this.gl.FLOAT, false, 0, 0); //prettier-ignore
+
+    // bind texture coords
+    this.gl.enableVertexAttribArray(uvAttribLocation);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.uvBuffer);
+    this.gl.vertexAttribPointer(uvAttribLocation, 2, this.gl.FLOAT, true, 0, 0);
 
     // console.log(positions.length, positions.length / 2);
-    this.gl.drawArrays(this.gl.TRIANGLES, 0, this.bufferLength / 2);
+    this.gl.drawArrays(this.gl.TRIANGLES, 0, this.posBufferLength / 2);
   }
 
-  drawSprites(sprites: Sprite[]) {
+  batchSprites(sprites: Sprite[]) {
     const points = sprites
       .map((sprite) => {
         return [
@@ -143,25 +201,47 @@ class main {
 
           // first triangle
           sprite.x,
-          sprite.y,
-          sprite.x + sprite.width,
-          sprite.y,
-          sprite.x + sprite.width,
           sprite.y + sprite.height,
+
+          sprite.x + sprite.width,
+          sprite.y,
+
+          sprite.x,
+          sprite.y,
 
           // second triangle
           sprite.x,
-          sprite.y,
+          sprite.y + sprite.height,
+
           sprite.x + sprite.width,
           sprite.y + sprite.height,
-          sprite.x,
-          sprite.y + sprite.height,
+
+          sprite.x + sprite.width,
+          sprite.y,
+        ];
+      })
+      .flat();
+
+    const uvs = sprites
+      .map((sprite) => {
+        return [
+          // 3----2       3
+          // |            |
+          // |            |
+          // 1       1----2
+
+          // first triangle
+          0, 0, 1, 1, 0, 1,
+
+          // second triangle
+          0, 0, 1, 0, 1, 1,
         ];
       })
       .flat();
 
     // console.log(points);
-    this.draw();
+    this.setBuffer(points, uvs);
+    // this.draw();
   }
 }
 
@@ -169,41 +249,19 @@ const spritegl = new main(canvasEl);
 
 // spritegl.drawSprite(new Sprite(0.0, 0.0, 0.1, 0.1));
 
-const sprites = [];
-for (let i = 0; i < 500000; i++) {
+const size = 32;
+const sprites: Sprite[] = [];
+for (let i = 0; i < 3000; i++) {
   sprites.push(
-    new Sprite(Math.random() * 2 - 1, Math.random() * 2 - 1, 0.01, 0.01)
+    new Sprite(
+      Math.floor(Math.random() * (spritegl.canvas.clientWidth - size)),
+      Math.floor(Math.random() * (spritegl.canvas.clientHeight - size)),
+      size,
+      size
+    )
   );
 }
-
-const points = sprites
-  .map((sprite) => {
-    return [
-      // 3----2       3
-      // |            |
-      // |            |
-      // 1       1----2
-
-      // first triangle
-      sprite.x,
-      sprite.y,
-      sprite.x + sprite.width,
-      sprite.y,
-      sprite.x + sprite.width,
-      sprite.y + sprite.height,
-
-      // second triangle
-      sprite.x,
-      sprite.y,
-      sprite.x + sprite.width,
-      sprite.y + sprite.height,
-      sprite.x,
-      sprite.y + sprite.height,
-    ];
-  })
-  .flat();
-
-spritegl.setBuffer(points);
+spritegl.batchSprites(sprites);
 
 const smoothing = 0.02;
 let smoothFPS = 60;
@@ -213,8 +271,20 @@ window.requestAnimationFrame((t) => {
 });
 
 function draw(thisTime: DOMHighResTimeStamp, lastTime: DOMHighResTimeStamp) {
-  // spritegl.drawSprites(sprites);
+  // sprite update
+  sprites.forEach((sprite) => {
+    sprite.update();
+  });
+
+  // Batched draw
+  spritegl.batchSprites(sprites);
   spritegl.draw();
+
+  // Non-batched draw
+  // sprites.forEach((sprite) => {
+  //   spritegl.drawSprites([sprite]);
+  //   spritegl.draw();
+  // });
 
   const FPS = 1 / ((thisTime - lastTime) / 1000);
   smoothFPS = FPS * smoothing + smoothFPS * (1.0 - smoothing);
