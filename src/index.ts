@@ -43,7 +43,6 @@ class Sprite {
   update() {
     this.x += this.vel.x;
     this.y += this.vel.y;
-
     if (this.x < 0 || this.x > spritegl.canvas.width - this.width)
       this.vel.x *= -1;
     if (this.y < 0 || this.y > spritegl.canvas.height - this.height)
@@ -51,13 +50,22 @@ class Sprite {
   }
 }
 
+type bufferData = {
+  posBuffer: WebGLBuffer;
+  posBufferLength: number;
+  uvBuffer: WebGLBuffer;
+};
+
 class main {
   canvas: HTMLCanvasElement;
   gl: WebGLRenderingContext;
   shaderProgram: WebGLProgram;
-  posBuffer: WebGLBuffer;
-  uvBuffer: WebGLBuffer;
-  posBufferLength: number;
+
+  buffers: {
+    [key: string]: bufferData;
+  } = {
+    DEFAULT: null,
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -111,17 +119,14 @@ class main {
     gl.deleteProgram(program);
   }
 
-  setBuffer(positions: number[], uvs?: number[]) {
-    // create a bugger and put points in it
-    const posBuffer = this.gl.createBuffer();
+  createBuffer(key: string, positions: number[], uvs?: number[]) {
+    const posBuffer: WebGLBuffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, posBuffer);
     this.gl.bufferData(
       this.gl.ARRAY_BUFFER,
       new Float32Array(positions),
       this.gl.DYNAMIC_DRAW
     );
-    this.posBuffer = posBuffer;
-    this.posBufferLength = positions.length;
 
     const uvBuffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, uvBuffer);
@@ -131,10 +136,27 @@ class main {
       this.gl.DYNAMIC_DRAW
     );
 
-    this.uvBuffer = uvBuffer;
+    this.buffers[key] = {
+      posBuffer: posBuffer,
+      posBufferLength: positions.length,
+      uvBuffer: uvBuffer,
+    };
   }
 
-  draw() {
+  drawSprite(sprite: Sprite, buffer: string = "DEFAULT") {
+    const [pos, uvs] = this.buildSpriteAttributes([sprite]);
+    this.createBuffer(buffer, pos, uvs);
+    this.draw(this.buffers[buffer]);
+  }
+
+  drawSprites(sprites: Sprite[]) {
+    this.batchSprites(sprites);
+    this.draw(this.buffers.DEFAULT);
+  }
+
+  draw(buffer: bufferData = this.buffers.DEFAULT) {
+    if (!buffer) return;
+
     // look up where the vertex data needs to go.
     let posAttribLocation = this.gl.getAttribLocation(
       this.shaderProgram,
@@ -150,8 +172,8 @@ class main {
     mat4.ortho(
       viewMatrix,
       0,
-      this.gl.canvas.clientWidth,
-      this.gl.canvas.clientHeight,
+      this.gl.canvas.width,
+      this.gl.canvas.height,
       0,
       0,
       1
@@ -178,19 +200,28 @@ class main {
 
     // bind vert positions
     this.gl.enableVertexAttribArray(posAttribLocation);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.posBuffer);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.posBuffer);
     this.gl.vertexAttribPointer(posAttribLocation, 2, this.gl.FLOAT, false, 0, 0); //prettier-ignore
 
     // bind texture coords
     this.gl.enableVertexAttribArray(uvAttribLocation);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.uvBuffer);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.uvBuffer);
     this.gl.vertexAttribPointer(uvAttribLocation, 2, this.gl.FLOAT, true, 0, 0);
 
     // console.log(positions.length, positions.length / 2);
-    this.gl.drawArrays(this.gl.TRIANGLES, 0, this.posBufferLength / 2);
+    this.gl.drawArrays(this.gl.TRIANGLES, 0, buffer.posBufferLength / 2);
   }
 
-  batchSprites(sprites: Sprite[]) {
+  batchSprites(sprites: Sprite[], key: string = "DEFAULT") {
+    const [points, uvs] = this.buildSpriteAttributes(sprites);
+
+    // console.log(points);
+    // this.setBuffer(points, uvs);
+    this.createBuffer(key, points, uvs);
+    // this.draw();
+  }
+
+  buildSpriteAttributes(sprites: Sprite[]) {
     const points = sprites
       .map((sprite) => {
         return [
@@ -239,9 +270,7 @@ class main {
       })
       .flat();
 
-    // console.log(points);
-    this.setBuffer(points, uvs);
-    // this.draw();
+    return [points, uvs];
   }
 }
 
@@ -249,19 +278,26 @@ const spritegl = new main(canvasEl);
 
 // spritegl.drawSprite(new Sprite(0.0, 0.0, 0.1, 0.1));
 
-const size = 32;
+const size = 16;
 const sprites: Sprite[] = [];
-for (let i = 0; i < 3000; i++) {
-  sprites.push(
-    new Sprite(
-      Math.floor(Math.random() * (spritegl.canvas.clientWidth - size)),
-      Math.floor(Math.random() * (spritegl.canvas.clientHeight - size)),
-      size,
-      size
-    )
-  );
+// for (let i = 0; i < 1000; i++) {
+//   sprites.push(
+//     new Sprite(
+//       Math.floor(Math.random() * (spritegl.canvas.clientWidth - size)),
+//       Math.floor(Math.random() * (spritegl.canvas.clientHeight - size)),
+//       size,
+//       size
+//     )
+//   );
+// }
+for (let y = 0; y < 64; y++) {
+  for (let x = 0; x < 128; x++) {
+    sprites.push(new Sprite(x * size, y * size, size, size));
+  }
 }
-spritegl.batchSprites(sprites);
+
+spritegl.batchSprites(sprites, "TEST");
+// spritegl.createSpriteBatch(sprites);
 
 const smoothing = 0.02;
 let smoothFPS = 60;
@@ -276,21 +312,17 @@ function draw(thisTime: DOMHighResTimeStamp, lastTime: DOMHighResTimeStamp) {
     sprite.update();
   });
 
+  // Static draw
+  // spritegl.draw(spritegl.buffers.TEST);
+
   // Batched draw
-  spritegl.batchSprites(sprites);
-  spritegl.draw();
+  spritegl.drawSprites(sprites);
 
   // Non-batched draw
-  // sprites.forEach((sprite) => {
-  //   spritegl.drawSprites([sprite]);
-  //   spritegl.draw();
-  // });
+  // sprites.forEach((sprite) => spritegl.drawSprite(sprite));
 
   const FPS = 1 / ((thisTime - lastTime) / 1000);
   smoothFPS = FPS * smoothing + smoothFPS * (1.0 - smoothing);
-
-  // document.getElementById("fps").innerText =
-  //   Math.round(FPS * 100) / 100 + "\n" + Math.round(smoothFPS);
 
   document.getElementById("fps").innerText = Math.round(smoothFPS) + "";
   window.requestAnimationFrame((nextTime) => draw(nextTime, thisTime));
