@@ -23,6 +23,10 @@ const resizer = new ResizeObserver(([element]) => {
 
 resizer.observe(document.getElementById("root"));
 
+class Texture {
+  constructor() {}
+}
+
 function loadTexture(gl: WebGLRenderingContext, url: string) {
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -69,13 +73,14 @@ function loadTexture(gl: WebGLRenderingContext, url: string) {
     // power of 2 in both dimensions.
     if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
       // Yes, it's a power of 2. Generate mips.
-      gl.generateMipmap(gl.TEXTURE_2D);
+      // gl.generateMipmap(gl.TEXTURE_2D);
     } else {
       // No, it's not a power of 2. Turn off mips and set
       // wrapping to clamp to edge
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     }
   };
   image.src = url;
@@ -94,8 +99,15 @@ class Sprite {
   height: number = 0;
   vel: { x: number; y: number } = { x: 0, y: 0 };
   angle: number = Math.random() * Math.PI * 2;
+  depth: number = 0;
 
-  constructor(x: number, y: number, width: number, height: number) {
+  constructor(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    depth: number = 0
+  ) {
     this.x = x;
     this.y = y;
     this.width = width;
@@ -104,12 +116,12 @@ class Sprite {
       x: Math.sin(this.angle),
       y: Math.cos(this.angle),
     };
+    this.depth = depth;
   }
 
   update() {
     this.x += this.vel.x;
     this.y += this.vel.y;
-
     if (this.x < 0) {
       this.x = 0;
       this.vel.x *= -1;
@@ -151,6 +163,7 @@ class main {
     this.canvas = canvas;
     this.gl = canvas.getContext("webgl", {
       premultipliedAlpha: false, // Ask for non-premultiplied alpha
+      // alpha: false,
     });
 
     const vertShader = this.createShader(
@@ -168,6 +181,9 @@ class main {
     this.shaderProgram = this.createProgram(this.gl, vertShader, fragShader);
 
     this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
+    this.gl.enable(this.gl.BLEND);
+    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+    // this.gl.enable(this.gl.DEPTH_TEST);
     this.texture = loadTexture(this.gl, image);
     // console.log(this.texture);
   }
@@ -222,8 +238,8 @@ class main {
 
     this.buffers[key] = {
       posBuffer: posBuffer,
-      bufferLength: positions.length,
       uvBuffer: uvBuffer,
+      bufferLength: positions.length,
     };
   }
 
@@ -260,7 +276,7 @@ class main {
       this.gl.canvas.height,
       0,
       0,
-      1
+      100
     );
     // mat4.translate(viewMatrix, viewMatrix, [100, 100, 0]);
 
@@ -290,7 +306,7 @@ class main {
     // bind vert positions
     this.gl.enableVertexAttribArray(posAttribLocation);
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.posBuffer);
-    this.gl.vertexAttribPointer(posAttribLocation, 2, this.gl.FLOAT, false, 0, 0); //prettier-ignore
+    this.gl.vertexAttribPointer(posAttribLocation, 3, this.gl.FLOAT, false, 0, 0); //prettier-ignore
 
     // bind texture coords
     this.gl.enableVertexAttribArray(uvAttribLocation);
@@ -308,7 +324,7 @@ class main {
     this.gl.uniform1i(uSamplerLocation, 0);
 
     // console.log(positions.length, positions.length / 2);
-    this.gl.drawArrays(this.gl.TRIANGLES, 0, buffer.bufferLength / 2);
+    this.gl.drawArrays(this.gl.TRIANGLES, 0, buffer.bufferLength / 3);
   }
 
   batchSprites(sprites: Sprite[], key: string = "DEFAULT") {
@@ -321,10 +337,13 @@ class main {
   }
 
   buildSpriteAttributes(sprites: Sprite[]) {
+    let z = 0;
     const points = sprites
+      .sort((a, b) => b.depth - a.depth)
       .map((sprite) => {
-        let x = Math.floor(sprite.x);
-        let y = Math.floor(sprite.y);
+        let x = sprite.x;
+        let y = sprite.y;
+        // z = z - 0.01;
         return [
           // 3----2       3
           // |            |
@@ -334,22 +353,28 @@ class main {
           // first triangle
           x,
           y + sprite.height,
+          -sprite.depth,
 
           x + sprite.width,
           y,
+          -sprite.depth,
 
           x,
           y,
+          -sprite.depth,
 
           // second triangle
           x,
           y + sprite.height,
+          -sprite.depth,
 
           x + sprite.width,
           y + sprite.height,
+          -sprite.depth,
 
           x + sprite.width,
           y,
+          -sprite.depth,
         ];
       })
       .flat();
@@ -381,11 +406,11 @@ const spritegl = new main(canvasEl);
 
 const size = 100;
 const sprites: Sprite[] = [];
-for (let i = 0; i < 2500; i++) {
+for (let i = 0; i < 1000; i++) {
   sprites.push(
     new Sprite(
-      Math.floor(Math.random() * (spritegl.canvas.clientWidth - size)),
-      Math.floor(Math.random() * (spritegl.canvas.clientHeight - size)),
+      Math.random() * (spritegl.canvas.clientWidth - size),
+      Math.random() * (spritegl.canvas.clientHeight - size),
       size,
       size
     )
@@ -396,8 +421,11 @@ for (let i = 0; i < 2500; i++) {
 //     sprites.push(new Sprite(x * size, y * size, size, size));
 //   }
 // }
+// sprites.push(new Sprite(0, 0, size, size, 0.5));
+// sprites.push(new Sprite(25, 25, size, size, 0));
+// sprites.push(new Sprite(50, 0, size, size, 10));
 
-spritegl.batchSprites(sprites, "TEST");
+// spritegl.batchSprites(sprites, "TEST");
 // spritegl.createSpriteBatch(sprites);
 
 const smoothing = 0.02;

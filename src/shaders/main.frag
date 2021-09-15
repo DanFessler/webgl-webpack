@@ -10,5 +10,11 @@ void main() {
   // is responsible for setting
 
   // gl_FragColor = vec4(v_texCoord, 0, 1); // return uv color
-  gl_FragColor = texture2D(uSampler, v_texCoord);
+
+
+  vec4 texColor = texture2D(uSampler, v_texCoord);
+  
+  // if (texColor.a < 0.1) discard;
+
+  gl_FragColor = texColor;
 }

@@ -1,5 +1,5 @@
 .appCanvas {
-  background-color: black;
+  background-color: red;
   /* border: 2px solid red; */
   flex-grow: 1;
   image-rendering: pixelated;

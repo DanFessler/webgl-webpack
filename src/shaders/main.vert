@@ -18,6 +18,7 @@ void main() {
 
   // gl_Position = a_position;
   // gl_Position = aMat4 * a_position;
+  // gl_Position = u_viewMatrix * floor(a_position);
   gl_Position = u_viewMatrix * a_position;
 
   v_texCoord = a_texCoord;
