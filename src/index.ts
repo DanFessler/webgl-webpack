@@ -5,6 +5,8 @@ import fragShaderSrc from "./shaders/main.frag";
 import { mat4, mat3 } from "gl-matrix";
 // const mat4 = require("gl-mat4");
 
+import image from "./images/newportrait.gif";
+
 // Create canvas
 const canvasEl = document.createElement("canvas");
 canvasEl.className = css.appCanvas;
@@ -20,6 +22,70 @@ const resizer = new ResizeObserver(([element]) => {
 });
 
 resizer.observe(document.getElementById("root"));
+
+function loadTexture(gl: WebGLRenderingContext, url: string) {
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  // Because images have to be downloaded over the internet
+  // they might take a moment until they are ready.
+  // Until then put a single pixel in the texture so we can
+  // use it immediately. When the image has finished downloading
+  // we'll update the texture with the contents of the image.
+  const level = 0;
+  const internalFormat = gl.RGBA;
+  const width = 1;
+  const height = 1;
+  const border = 0;
+  const srcFormat = gl.RGBA;
+  const srcType = gl.UNSIGNED_BYTE;
+  const pixel = new Uint8Array([0, 0, 255, 255]); // opaque blue
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    level,
+    internalFormat,
+    width,
+    height,
+    border,
+    srcFormat,
+    srcType,
+    pixel
+  );
+
+  const image = new Image();
+  image.onload = function () {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      level,
+      internalFormat,
+      srcFormat,
+      srcType,
+      image
+    );
+
+    // WebGL1 has different requirements for power of 2 images
+    // vs non power of 2 images so check if the image is a
+    // power of 2 in both dimensions.
+    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+      // Yes, it's a power of 2. Generate mips.
+      gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+      // No, it's not a power of 2. Turn off mips and set
+      // wrapping to clamp to edge
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    }
+  };
+  image.src = url;
+
+  return texture;
+}
+
+function isPowerOf2(value: number) {
+  return (value & (value - 1)) == 0;
+}
 
 class Sprite {
   x: number = 0;
@@ -43,23 +109,37 @@ class Sprite {
   update() {
     this.x += this.vel.x;
     this.y += this.vel.y;
-    if (this.x < 0 || this.x > spritegl.canvas.width - this.width)
+
+    if (this.x < 0) {
+      this.x = 0;
       this.vel.x *= -1;
-    if (this.y < 0 || this.y > spritegl.canvas.height - this.height)
+    }
+    if (this.x > spritegl.canvas.width - this.width) {
+      this.x = spritegl.canvas.width - this.width;
+      this.vel.x *= -1;
+    }
+    if (this.y < 0) {
+      this.y = 0;
       this.vel.y *= -1;
+    }
+    if (this.y > spritegl.canvas.height - this.height) {
+      this.y = spritegl.canvas.height - this.height;
+      this.vel.y *= -1;
+    }
   }
 }
 
 type bufferData = {
   posBuffer: WebGLBuffer;
-  posBufferLength: number;
   uvBuffer: WebGLBuffer;
+  bufferLength: number;
 };
 
 class main {
   canvas: HTMLCanvasElement;
   gl: WebGLRenderingContext;
   shaderProgram: WebGLProgram;
+  texture: WebGLTexture;
 
   buffers: {
     [key: string]: bufferData;
@@ -70,7 +150,7 @@ class main {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.gl = canvas.getContext("webgl", {
-      alpha: false,
+      premultipliedAlpha: false, // Ask for non-premultiplied alpha
     });
 
     const vertShader = this.createShader(
@@ -86,6 +166,10 @@ class main {
     );
 
     this.shaderProgram = this.createProgram(this.gl, vertShader, fragShader);
+
+    this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
+    this.texture = loadTexture(this.gl, image);
+    // console.log(this.texture);
   }
 
   createShader(gl: WebGLRenderingContext, type: number, source: string) {
@@ -138,7 +222,7 @@ class main {
 
     this.buffers[key] = {
       posBuffer: posBuffer,
-      posBufferLength: positions.length,
+      bufferLength: positions.length,
       uvBuffer: uvBuffer,
     };
   }
@@ -186,6 +270,11 @@ class main {
       "u_viewMatrix"
     );
 
+    let uSamplerLocation = this.gl.getUniformLocation(
+      this.shaderProgram,
+      "uSampler"
+    );
+
     // set uniform matrix
     this.gl.uniformMatrix4fv(matrixUniformLocation, false, viewMatrix);
 
@@ -208,8 +297,18 @@ class main {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.uvBuffer);
     this.gl.vertexAttribPointer(uvAttribLocation, 2, this.gl.FLOAT, true, 0, 0);
 
+    // add texture
+    // Tell WebGL we want to affect texture unit 0
+    this.gl.activeTexture(this.gl.TEXTURE0);
+
+    // Bind the texture to texture unit 0
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+
+    // Tell the shader we bound the texture to texture unit 0
+    this.gl.uniform1i(uSamplerLocation, 0);
+
     // console.log(positions.length, positions.length / 2);
-    this.gl.drawArrays(this.gl.TRIANGLES, 0, buffer.posBufferLength / 2);
+    this.gl.drawArrays(this.gl.TRIANGLES, 0, buffer.bufferLength / 2);
   }
 
   batchSprites(sprites: Sprite[], key: string = "DEFAULT") {
@@ -224,6 +323,8 @@ class main {
   buildSpriteAttributes(sprites: Sprite[]) {
     const points = sprites
       .map((sprite) => {
+        let x = Math.floor(sprite.x);
+        let y = Math.floor(sprite.y);
         return [
           // 3----2       3
           // |            |
@@ -231,24 +332,24 @@ class main {
           // 1       1----2
 
           // first triangle
-          sprite.x,
-          sprite.y + sprite.height,
+          x,
+          y + sprite.height,
 
-          sprite.x + sprite.width,
-          sprite.y,
+          x + sprite.width,
+          y,
 
-          sprite.x,
-          sprite.y,
+          x,
+          y,
 
           // second triangle
-          sprite.x,
-          sprite.y + sprite.height,
+          x,
+          y + sprite.height,
 
-          sprite.x + sprite.width,
-          sprite.y + sprite.height,
+          x + sprite.width,
+          y + sprite.height,
 
-          sprite.x + sprite.width,
-          sprite.y,
+          x + sprite.width,
+          y,
         ];
       })
       .flat();
@@ -278,23 +379,23 @@ const spritegl = new main(canvasEl);
 
 // spritegl.drawSprite(new Sprite(0.0, 0.0, 0.1, 0.1));
 
-const size = 16;
+const size = 100;
 const sprites: Sprite[] = [];
-// for (let i = 0; i < 1000; i++) {
-//   sprites.push(
-//     new Sprite(
-//       Math.floor(Math.random() * (spritegl.canvas.clientWidth - size)),
-//       Math.floor(Math.random() * (spritegl.canvas.clientHeight - size)),
-//       size,
-//       size
-//     )
-//   );
-// }
-for (let y = 0; y < 64; y++) {
-  for (let x = 0; x < 128; x++) {
-    sprites.push(new Sprite(x * size, y * size, size, size));
-  }
+for (let i = 0; i < 2500; i++) {
+  sprites.push(
+    new Sprite(
+      Math.floor(Math.random() * (spritegl.canvas.clientWidth - size)),
+      Math.floor(Math.random() * (spritegl.canvas.clientHeight - size)),
+      size,
+      size
+    )
+  );
 }
+// for (let y = 0; y < 64; y++) {
+//   for (let x = 0; x < 128; x++) {
+//     sprites.push(new Sprite(x * size, y * size, size, size));
+//   }
+// }
 
 spritegl.batchSprites(sprites, "TEST");
 // spritegl.createSpriteBatch(sprites);
