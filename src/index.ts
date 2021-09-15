@@ -24,7 +24,54 @@ const resizer = new ResizeObserver(([element]) => {
 resizer.observe(document.getElementById("root"));
 
 class Texture {
-  constructor() {}
+  gl: WebGLRenderingContext;
+  glTexture: WebGLTexture;
+
+  constructor(gl: WebGLRenderingContext, url: string) {
+    this.gl = gl;
+
+    this.glTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
+
+    const image = new Image();
+    image.onload = this.onLoad;
+    image.src = url;
+  }
+
+  onLoad = (e: any) => {
+    const gl = this.gl;
+
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const srcFormat = gl.RGBA;
+    const srcType = gl.UNSIGNED_BYTE;
+
+    gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      level,
+      internalFormat,
+      srcFormat,
+      srcType,
+      e.target
+    );
+
+    // WebGL1 has different requirements for power of 2 images
+    // vs non power of 2 images so check if the image is a
+    // power of 2 in both dimensions.
+    if (isPowerOf2(e.target.width) && isPowerOf2(e.target.height)) {
+      // Yes, it's a power of 2. Generate mips.
+      gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+      // No, it's not a power of 2. Turn off mips and set
+      // wrapping to clamp to edge
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+    // set image filtering
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  };
 }
 
 function loadTexture(gl: WebGLRenderingContext, url: string) {
@@ -43,7 +90,7 @@ function loadTexture(gl: WebGLRenderingContext, url: string) {
   const border = 0;
   const srcFormat = gl.RGBA;
   const srcType = gl.UNSIGNED_BYTE;
-  const pixel = new Uint8Array([0, 0, 255, 255]); // opaque blue
+  const pixel = new Uint8Array([0, 0, 0, 0]);
   gl.texImage2D(
     gl.TEXTURE_2D,
     level,
@@ -151,7 +198,7 @@ class main {
   canvas: HTMLCanvasElement;
   gl: WebGLRenderingContext;
   shaderProgram: WebGLProgram;
-  texture: WebGLTexture;
+  texture: Texture;
 
   buffers: {
     [key: string]: bufferData;
@@ -184,7 +231,8 @@ class main {
     this.gl.enable(this.gl.BLEND);
     this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
     // this.gl.enable(this.gl.DEPTH_TEST);
-    this.texture = loadTexture(this.gl, image);
+    // this.texture = loadTexture(this.gl, image);
+    this.texture = new Texture(this.gl, image);
     // console.log(this.texture);
   }
 
@@ -318,7 +366,7 @@ class main {
     this.gl.activeTexture(this.gl.TEXTURE0);
 
     // Bind the texture to texture unit 0
-    this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture.glTexture);
 
     // Tell the shader we bound the texture to texture unit 0
     this.gl.uniform1i(uSamplerLocation, 0);
@@ -339,7 +387,7 @@ class main {
   buildSpriteAttributes(sprites: Sprite[]) {
     let z = 0;
     const points = sprites
-      .sort((a, b) => b.depth - a.depth)
+      // .sort((a, b) => b.depth - a.depth) // manual zdepth sort
       .map((sprite) => {
         let x = sprite.x;
         let y = sprite.y;
