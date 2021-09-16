@@ -2,10 +2,13 @@ import "./index.css";
 import css from "./canvas.module.css";
 import vertShaderSrc from "./shaders/main.vert";
 import fragShaderSrc from "./shaders/main.frag";
-import { mat4, mat3 } from "gl-matrix";
-// const mat4 = require("gl-mat4");
+import { mat4 } from "gl-matrix";
+
+import Sprite from "./Sprite";
+import Texture, { TextureLoader } from "./Texture";
 
 import image from "./images/newportrait.gif";
+import image2 from "./images/newportrait2.gif";
 
 // Create canvas
 const canvasEl = document.createElement("canvas");
@@ -23,175 +26,11 @@ const resizer = new ResizeObserver(([element]) => {
 
 resizer.observe(document.getElementById("root"));
 
-class Texture {
-  gl: WebGLRenderingContext;
-  glTexture: WebGLTexture;
-
-  constructor(gl: WebGLRenderingContext, url: string) {
-    this.gl = gl;
-
-    this.glTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
-
-    const image = new Image();
-    image.onload = this.onLoad;
-    image.src = url;
-  }
-
-  onLoad = (e: any) => {
-    const gl = this.gl;
-
-    const level = 0;
-    const internalFormat = gl.RGBA;
-    const srcFormat = gl.RGBA;
-    const srcType = gl.UNSIGNED_BYTE;
-
-    gl.bindTexture(gl.TEXTURE_2D, this.glTexture);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      level,
-      internalFormat,
-      srcFormat,
-      srcType,
-      e.target
-    );
-
-    // WebGL1 has different requirements for power of 2 images
-    // vs non power of 2 images so check if the image is a
-    // power of 2 in both dimensions.
-    if (isPowerOf2(e.target.width) && isPowerOf2(e.target.height)) {
-      // Yes, it's a power of 2. Generate mips.
-      gl.generateMipmap(gl.TEXTURE_2D);
-    } else {
-      // No, it's not a power of 2. Turn off mips and set
-      // wrapping to clamp to edge
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    }
-    // set image filtering
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  };
-}
-
-function loadTexture(gl: WebGLRenderingContext, url: string) {
-  const texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-
-  // Because images have to be downloaded over the internet
-  // they might take a moment until they are ready.
-  // Until then put a single pixel in the texture so we can
-  // use it immediately. When the image has finished downloading
-  // we'll update the texture with the contents of the image.
-  const level = 0;
-  const internalFormat = gl.RGBA;
-  const width = 1;
-  const height = 1;
-  const border = 0;
-  const srcFormat = gl.RGBA;
-  const srcType = gl.UNSIGNED_BYTE;
-  const pixel = new Uint8Array([0, 0, 0, 0]);
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    level,
-    internalFormat,
-    width,
-    height,
-    border,
-    srcFormat,
-    srcType,
-    pixel
-  );
-
-  const image = new Image();
-  image.onload = function () {
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      level,
-      internalFormat,
-      srcFormat,
-      srcType,
-      image
-    );
-
-    // WebGL1 has different requirements for power of 2 images
-    // vs non power of 2 images so check if the image is a
-    // power of 2 in both dimensions.
-    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-      // Yes, it's a power of 2. Generate mips.
-      // gl.generateMipmap(gl.TEXTURE_2D);
-    } else {
-      // No, it's not a power of 2. Turn off mips and set
-      // wrapping to clamp to edge
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    }
-  };
-  image.src = url;
-
-  return texture;
-}
-
-function isPowerOf2(value: number) {
-  return (value & (value - 1)) == 0;
-}
-
-class Sprite {
-  x: number = 0;
-  y: number = 0;
-  width: number = 0;
-  height: number = 0;
-  vel: { x: number; y: number } = { x: 0, y: 0 };
-  angle: number = Math.random() * Math.PI * 2;
-  depth: number = 0;
-
-  constructor(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    depth: number = 0
-  ) {
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
-    this.vel = {
-      x: Math.sin(this.angle),
-      y: Math.cos(this.angle),
-    };
-    this.depth = depth;
-  }
-
-  update() {
-    this.x += this.vel.x;
-    this.y += this.vel.y;
-    if (this.x < 0) {
-      this.x = 0;
-      this.vel.x *= -1;
-    }
-    if (this.x > spritegl.canvas.width - this.width) {
-      this.x = spritegl.canvas.width - this.width;
-      this.vel.x *= -1;
-    }
-    if (this.y < 0) {
-      this.y = 0;
-      this.vel.y *= -1;
-    }
-    if (this.y > spritegl.canvas.height - this.height) {
-      this.y = spritegl.canvas.height - this.height;
-      this.vel.y *= -1;
-    }
-  }
-}
-
 type bufferData = {
   posBuffer: WebGLBuffer;
   uvBuffer: WebGLBuffer;
   bufferLength: number;
+  texture: Texture;
 };
 
 class main {
@@ -231,9 +70,6 @@ class main {
     this.gl.enable(this.gl.BLEND);
     this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
     // this.gl.enable(this.gl.DEPTH_TEST);
-    // this.texture = loadTexture(this.gl, image);
-    this.texture = new Texture(this.gl, image);
-    // console.log(this.texture);
   }
 
   createShader(gl: WebGLRenderingContext, type: number, source: string) {
@@ -267,7 +103,12 @@ class main {
     gl.deleteProgram(program);
   }
 
-  createBuffer(key: string, positions: number[], uvs?: number[]) {
+  createBuffer(
+    key: string,
+    positions: number[],
+    uvs: number[],
+    texture: Texture
+  ) {
     const posBuffer: WebGLBuffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, posBuffer);
     this.gl.bufferData(
@@ -288,12 +129,13 @@ class main {
       posBuffer: posBuffer,
       uvBuffer: uvBuffer,
       bufferLength: positions.length,
+      texture: texture,
     };
   }
 
   drawSprite(sprite: Sprite, buffer: string = "DEFAULT") {
     const [pos, uvs] = this.buildSpriteAttributes([sprite]);
-    this.createBuffer(buffer, pos, uvs);
+    this.createBuffer(buffer, pos, uvs, sprite.texture);
     this.draw(this.buffers[buffer]);
   }
 
@@ -366,7 +208,7 @@ class main {
     this.gl.activeTexture(this.gl.TEXTURE0);
 
     // Bind the texture to texture unit 0
-    this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture.glTexture);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, buffer.texture.glTexture);
 
     // Tell the shader we bound the texture to texture unit 0
     this.gl.uniform1i(uSamplerLocation, 0);
@@ -380,7 +222,7 @@ class main {
 
     // console.log(points);
     // this.setBuffer(points, uvs);
-    this.createBuffer(key, points, uvs);
+    this.createBuffer(key, points, uvs, sprites[0].texture);
     // this.draw();
   }
 
@@ -449,58 +291,68 @@ class main {
 }
 
 const spritegl = new main(canvasEl);
+const loader = new TextureLoader(spritegl.gl, onLoad);
+loader.add(image, "myTexture");
+loader.add(image2, "myTexture2");
+loader.load();
 
-// spritegl.drawSprite(new Sprite(0.0, 0.0, 0.1, 0.1));
+function onLoad(textures: { [url: string]: Texture }) {
+  // spritegl.drawSprite(new Sprite(0.0, 0.0, 0.1, 0.1));
 
-const size = 100;
-const sprites: Sprite[] = [];
-for (let i = 0; i < 1000; i++) {
-  sprites.push(
-    new Sprite(
-      Math.random() * (spritegl.canvas.clientWidth - size),
-      Math.random() * (spritegl.canvas.clientHeight - size),
-      size,
-      size
-    )
-  );
-}
-// for (let y = 0; y < 64; y++) {
-//   for (let x = 0; x < 128; x++) {
-//     sprites.push(new Sprite(x * size, y * size, size, size));
-//   }
-// }
-// sprites.push(new Sprite(0, 0, size, size, 0.5));
-// sprites.push(new Sprite(25, 25, size, size, 0));
-// sprites.push(new Sprite(50, 0, size, size, 10));
+  const size = 100;
+  const sprites: Sprite[] = [];
+  for (let i = 0; i < 1000; i++) {
+    sprites.push(
+      new Sprite(
+        Math.random() * (spritegl.canvas.clientWidth - size),
+        Math.random() * (spritegl.canvas.clientHeight - size),
+        size,
+        size,
+        0,
+        Math.floor(Math.random() * 2) === 0
+          ? textures.myTexture
+          : textures.myTexture2
+      )
+    );
+  }
+  // for (let y = 0; y < 64; y++) {
+  //   for (let x = 0; x < 128; x++) {
+  //     sprites.push(new Sprite(x * size, y * size, size, size));
+  //   }
+  // }
+  // sprites.push(new Sprite(0, 0, size, size, 0.5));
+  // sprites.push(new Sprite(25, 25, size, size, 0));
+  // sprites.push(new Sprite(50, 0, size, size, 10));
 
-// spritegl.batchSprites(sprites, "TEST");
-// spritegl.createSpriteBatch(sprites);
+  spritegl.batchSprites(sprites, "TEST");
+  // spritegl.createSpriteBatch(sprites);
 
-const smoothing = 0.02;
-let smoothFPS = 60;
+  const smoothing = 0.02;
+  let smoothFPS = 60;
 
-window.requestAnimationFrame((t) => {
-  draw(t, t + 1);
-});
-
-function draw(thisTime: DOMHighResTimeStamp, lastTime: DOMHighResTimeStamp) {
-  // sprite update
-  sprites.forEach((sprite) => {
-    sprite.update();
+  window.requestAnimationFrame((t) => {
+    draw(t, t + 1);
   });
 
-  // Static draw
-  // spritegl.draw(spritegl.buffers.TEST);
+  function draw(thisTime: DOMHighResTimeStamp, lastTime: DOMHighResTimeStamp) {
+    // sprite update
+    sprites.forEach((sprite) => {
+      sprite.update();
+    });
 
-  // Batched draw
-  spritegl.drawSprites(sprites);
+    // Static draw
+    // spritegl.draw(spritegl.buffers.TEST);
 
-  // Non-batched draw
-  // sprites.forEach((sprite) => spritegl.drawSprite(sprite));
+    // Batched draw
+    spritegl.drawSprites(sprites);
 
-  const FPS = 1 / ((thisTime - lastTime) / 1000);
-  smoothFPS = FPS * smoothing + smoothFPS * (1.0 - smoothing);
+    // Non-batched draw
+    // sprites.forEach((sprite) => spritegl.drawSprite(sprite));
 
-  document.getElementById("fps").innerText = Math.round(smoothFPS) + "";
-  window.requestAnimationFrame((nextTime) => draw(nextTime, thisTime));
+    const FPS = 1 / ((thisTime - lastTime) / 1000);
+    smoothFPS = FPS * smoothing + smoothFPS * (1.0 - smoothing);
+
+    document.getElementById("fps").innerText = Math.round(smoothFPS) + "";
+    window.requestAnimationFrame((nextTime) => draw(nextTime, thisTime));
+  }
 }
