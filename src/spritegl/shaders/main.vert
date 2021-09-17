@@ -1,6 +1,7 @@
 // an attribute will receive data from a buffer
-attribute vec4 a_position;
+attribute vec4 a_point;
 attribute vec2 a_texCoord;
+attribute vec2 a_position;
 
 uniform mat4 u_viewMatrix;
 
@@ -16,10 +17,10 @@ void main() {
                     0.0, 0.0, 1.0, 0.0,  // 3. column
                     0.0, 0.0, 0.0, 1.0); // 4. column
 
-  // gl_Position = a_position;
-  // gl_Position = aMat4 * a_position;
-  // gl_Position = u_viewMatrix * floor(a_position);
-  gl_Position = u_viewMatrix * a_position;
+  // gl_Position = a_point;
+  // gl_Position = aMat4 * a_point;
+  // gl_Position = u_viewMatrix * floor(a_point);
+  gl_Position = u_viewMatrix * (a_point + vec4(vec2(0, 0), 0, 0));
 
   v_texCoord = a_texCoord;
 }
