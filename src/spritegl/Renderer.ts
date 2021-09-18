@@ -5,8 +5,6 @@ import Texture from "./Texture";
 import Sprite from "./Sprite";
 
 type bufferData = {
-  pointBuffer: WebGLBuffer;
-  uvBuffer: WebGLBuffer;
   posBuffer: WebGLBuffer;
   bufferLength: number;
   texture: Texture;
@@ -24,6 +22,8 @@ class Renderer {
   gl: WebGLRenderingContext;
   shaderProgram: WebGLProgram;
   texture: Texture;
+  pointBuffer: WebGLBuffer;
+  uvBuffer: WebGLBuffer;
 
   buffers: {
     [key: string]: bufferData;
@@ -64,9 +64,25 @@ class Renderer {
     this.shaderProgram = this.createProgram(this.gl, vertShader, fragShader);
 
     this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
-    this.gl.enable(this.gl.BLEND);
-    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+    // this.gl.enable(this.gl.BLEND);
+    // this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
     // this.gl.enable(this.gl.DEPTH_TEST);
+
+    this.pointBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pointBuffer);
+    this.gl.bufferData(
+      this.gl.ARRAY_BUFFER,
+      new Float32Array([0, 100, 100, 0, 0, 0, 0, 100, 100, 100, 100, 0]),
+      this.gl.DYNAMIC_DRAW
+    );
+
+    this.uvBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.uvBuffer);
+    this.gl.bufferData(
+      this.gl.ARRAY_BUFFER,
+      new Float32Array([0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1]),
+      this.gl.DYNAMIC_DRAW
+    );
   }
 
   createShader(gl: WebGLRenderingContext, type: number, source: string) {
@@ -100,29 +116,7 @@ class Renderer {
     gl.deleteProgram(program);
   }
 
-  createBuffer(
-    key: string,
-    points: number[],
-    uvs: number[],
-    positions: number[],
-    texture: Texture
-  ) {
-    const pointBuffer: WebGLBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, pointBuffer);
-    this.gl.bufferData(
-      this.gl.ARRAY_BUFFER,
-      new Float32Array(points),
-      this.gl.DYNAMIC_DRAW
-    );
-
-    const uvBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, uvBuffer);
-    this.gl.bufferData(
-      this.gl.ARRAY_BUFFER,
-      new Float32Array(uvs),
-      this.gl.DYNAMIC_DRAW
-    );
-
+  createBuffer(key: string, positions: number[], texture: Texture) {
     const posBuffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, posBuffer);
     this.gl.bufferData(
@@ -132,17 +126,15 @@ class Renderer {
     );
 
     this.buffers[key] = {
-      pointBuffer: pointBuffer,
-      uvBuffer: uvBuffer,
       posBuffer: posBuffer,
-      bufferLength: points.length,
+      bufferLength: positions.length / 2,
       texture: texture,
     };
   }
 
   drawSprite(sprite: Sprite, buffer: string = "DEFAULT") {
-    const [points, uvs, positions] = this.buildSpriteAttributes([sprite]);
-    this.createBuffer(buffer, points, uvs, positions, sprite.texture);
+    const positions = this.buildSpriteAttributes([sprite]);
+    this.createBuffer(buffer, positions, sprite.texture);
     this.draw(this.buffers[buffer]);
   }
 
@@ -154,6 +146,8 @@ class Renderer {
   draw(buffer: bufferData = this.buffers.DEFAULT) {
     if (!buffer) return;
 
+    const ext = this.gl.getExtension("ANGLE_instanced_arrays");
+
     // look up where the vertex data needs to go.
     let pointAttribLocation = this.gl.getAttribLocation(
       this.shaderProgram,
@@ -163,11 +157,6 @@ class Renderer {
     let uvAttribLocation = this.gl.getAttribLocation(
       this.shaderProgram,
       "a_texCoord"
-    );
-
-    let posAttribLocation = this.gl.getAttribLocation(
-      this.shaderProgram,
-      "a_position"
     );
 
     const viewMatrix = mat4.create();
@@ -206,18 +195,29 @@ class Renderer {
     this.gl.useProgram(this.shaderProgram);
 
     // bind vert positions
-    // const computedPositions = new Float32Array([
-    //   0, 100, 100, 0, 0, 0, 0, 100, 100, 100, 100, 0,
-    // ]);
     this.gl.enableVertexAttribArray(pointAttribLocation);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.pointBuffer);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pointBuffer);
     this.gl.vertexAttribPointer(pointAttribLocation, 2, this.gl.FLOAT, false, 0, 0); //prettier-ignore
 
     // bind texture coords
-    // const computedUvs = new Float32Array([0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1]);
     this.gl.enableVertexAttribArray(uvAttribLocation);
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.uvBuffer);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.uvBuffer);
     this.gl.vertexAttribPointer(uvAttribLocation, 2, this.gl.FLOAT, true, 0, 0);
+
+    // add texture
+    // Tell WebGL we want to affect texture unit 0
+    this.gl.activeTexture(this.gl.TEXTURE0);
+
+    // Bind the texture to texture unit 0
+    this.gl.bindTexture(this.gl.TEXTURE_2D, buffer.texture.glTexture);
+
+    // Tell the shader we bound the texture to texture unit 0
+    this.gl.uniform1i(uSamplerLocation, 0);
+
+    const posAttribLocation = this.gl.getAttribLocation(
+      this.shaderProgram,
+      "a_position"
+    );
 
     // bind positions
     this.gl.enableVertexAttribArray(posAttribLocation);
@@ -230,29 +230,21 @@ class Renderer {
       0,
       0
     );
-    console.log(posAttribLocation, buffer.posBuffer);
-
-    // add texture
-    // Tell WebGL we want to affect texture unit 0
-    this.gl.activeTexture(this.gl.TEXTURE0);
-
-    // Bind the texture to texture unit 0
-    this.gl.bindTexture(this.gl.TEXTURE_2D, buffer.texture.glTexture);
-
-    // Tell the shader we bound the texture to texture unit 0
-    this.gl.uniform1i(uSamplerLocation, 0);
+    ext.vertexAttribDivisorANGLE(posAttribLocation, 1);
+    // console.log(posAttribLocation, buffer.posBuffer);
 
     // console.log(positions.length, positions.length / 2);
-    this.gl.drawArrays(this.gl.TRIANGLES, 0, buffer.bufferLength / 2);
+    // this.gl.drawArrays(this.gl.TRIANGLES, 0, buffer.bufferLength / 2);
+    ext.drawArraysInstancedANGLE(this.gl.TRIANGLES, 0, 6, buffer.bufferLength);
   }
 
   batchSprites(sprites: Sprite[], key: string = "DEFAULT") {
-    const [points, uvs, positions] = this.buildSpriteAttributes(sprites);
+    const positions = this.buildSpriteAttributes(sprites);
 
     // console.log(points);
     // this.setBuffer(points, uvs);
-    this.createBuffer(key, points, uvs, positions, sprites[0].texture);
-    // this.draw();
+    this.createBuffer(key, positions, sprites[0].texture);
+    // this.draw(); //
   }
 
   buildSpriteAttributes(sprites: Sprite[]) {
@@ -278,14 +270,15 @@ class Renderer {
 
     sprites.forEach((sprite) => {
       // console.log("concat", premadePoints);
-      points = points.concat(premadePoints);
-      uvs = uvs.concat(premadeUvs);
-      positions = positions.concat([sprite.x, sprite.y]);
+      // points = points.concat(premadePoints);
+      // uvs = uvs.concat(premadeUvs);
+      positions.push(sprite.x);
+      positions.push(sprite.y);
     });
 
     // console.log(points, uvs, positions);
 
-    return [points, uvs, positions];
+    return positions;
   }
 }
 

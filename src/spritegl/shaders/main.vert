@@ -6,6 +6,7 @@ attribute vec2 a_position;
 uniform mat4 u_viewMatrix;
 
 varying highp vec2 v_texCoord;
+varying highp vec2 v_position;
 
 // all shaders have a main function
 void main() {
@@ -20,7 +21,8 @@ void main() {
   // gl_Position = a_point;
   // gl_Position = aMat4 * a_point;
   // gl_Position = u_viewMatrix * floor(a_point);
-  gl_Position = u_viewMatrix * (a_point + vec4(vec2(0, 0), 0, 0));
+  gl_Position = u_viewMatrix * (a_point + vec4(a_position, 0, 0));
 
   v_texCoord = a_texCoord;
+  v_position = a_position;
 }

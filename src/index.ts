@@ -18,7 +18,7 @@ function start(textures: { [url: string]: Texture }) {
   const sprites: Sprite[] = [];
 
   // Randomly positioned sprites
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 100000; i++) {
     sprites.push(
       new MySprite(
         Math.random() * (spritegl.canvas.clientWidth - size),

@@ -3,6 +3,7 @@
 precision mediump float;
 
 varying highp vec2 v_texCoord;
+varying highp vec2 v_position;
 uniform sampler2D uSampler;
 
 void main() {
@@ -14,7 +15,7 @@ void main() {
 
   vec4 texColor = texture2D(uSampler, v_texCoord);
   
-  // if (texColor.a < 0.1) discard;
+  if (texColor.a < 0.1) discard;
 
   gl_FragColor = texColor;
 }
