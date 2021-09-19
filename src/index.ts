@@ -18,7 +18,7 @@ function start(textures: { [url: string]: Texture }) {
   const sprites: Sprite[] = [];
 
   // Randomly positioned sprites
-  for (let i = 0; i < 100000; i++) {
+  for (let i = 0; i < 2000; i++) {
     sprites.push(
       new MySprite(
         Math.random() * (spritegl.canvas.clientWidth - size),
@@ -26,26 +26,14 @@ function start(textures: { [url: string]: Texture }) {
         size,
         size,
         0,
-        Math.floor(Math.random() * 2) === 0
-          ? textures.myTexture
-          : textures.myTexture2
+        textures.myTexture
+        // // randomly select between two textures
+        // Math.floor(Math.random() * 2) === 0
+        //   ? textures.myTexture
+        //   : textures.myTexture2
       )
     );
   }
-
-  // Grid aligned sprites
-  // for (let y = 0; y < 64; y++) {
-  //   for (let x = 0; x < 128; x++) {
-  //     sprites.push(
-  //       new Sprite(x * size, y * size, size, size, 0, textures.myTexture)
-  //     );
-  //   }
-  // }
-
-  // Manually positioned sprites with depth
-  // sprites.push(new Sprite(0, 0, size, size, 0.5, textures.myTexture));
-  // sprites.push(new Sprite(25, 25, size, size, 0, textures.myTexture));
-  // sprites.push(new Sprite(50, 0, size, size, 10, textures.myTexture));
 
   // Create batch for static draw
   spritegl.batchSprites(sprites, "TEST");

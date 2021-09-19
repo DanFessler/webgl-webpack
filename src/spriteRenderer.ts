@@ -3,8 +3,8 @@ import "./index.css";
 import css from "./canvas.module.css";
 
 const renderer = new Renderer({
-  width: 1440,
-  height: 1080,
+  width: 640,
+  height: 480,
   className: css.appCanvas,
 });
 

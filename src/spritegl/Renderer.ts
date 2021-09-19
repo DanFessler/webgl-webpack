@@ -4,6 +4,8 @@ import { mat4 } from "gl-matrix";
 import Texture from "./Texture";
 import Sprite from "./Sprite";
 
+const constPositions = new Array(20000).fill([0, 0]).flat();
+
 type bufferData = {
   posBuffer: WebGLBuffer;
   bufferLength: number;
@@ -32,64 +34,65 @@ class Renderer {
   };
 
   constructor({ canvas, width, height, className }: constructorTypes) {
+    // Set up canvas
     this.canvas = canvas ? canvas : document.createElement("canvas");
     this.canvas.width = width || 640;
     this.canvas.height = height || 480;
     if (className) this.canvas.className = className;
 
-    // Update canvas size on resize
+    // keep canvas size pixel perfect
     const resizer = new ResizeObserver(([element]) => {
       this.canvas.width = element.contentRect.width;
       this.canvas.height = element.contentRect.height;
     });
     resizer.observe(this.canvas);
 
+    // get webgl context
     this.gl = this.canvas.getContext("webgl", {
       premultipliedAlpha: false, // Ask for non-premultiplied alpha
-      // alpha: false,
     });
 
-    const vertShader = this.createShader(
-      this.gl,
-      this.gl.VERTEX_SHADER,
-      vertShaderSrc
-    );
+    // create shader program
+    this.shaderProgram = this.createProgram(vertShaderSrc, fragShaderSrc);
 
-    const fragShader = this.createShader(
-      this.gl,
-      this.gl.FRAGMENT_SHADER,
-      fragShaderSrc
-    );
-
-    this.shaderProgram = this.createProgram(this.gl, vertShader, fragShader);
-
+    // Flip texture Y default
     this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
+
+    // Set up alpha blend
     // this.gl.enable(this.gl.BLEND);
     // this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
     // this.gl.enable(this.gl.DEPTH_TEST);
 
-    this.pointBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.pointBuffer);
-    this.gl.bufferData(
-      this.gl.ARRAY_BUFFER,
-      new Float32Array([0, 100, 100, 0, 0, 0, 0, 100, 100, 100, 100, 0]),
-      this.gl.DYNAMIC_DRAW
-    );
+    // Set up quad vert buffer
+    this.pointBuffer = this.createStaticBuffer([
+      0, 100, 100, 0, 0, 0, 0, 100, 100, 100, 100, 0,
+    ]);
 
-    this.uvBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.uvBuffer);
-    this.gl.bufferData(
-      this.gl.ARRAY_BUFFER,
-      new Float32Array([0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1]),
-      this.gl.DYNAMIC_DRAW
-    );
+    // set up quad UV buffer
+    this.uvBuffer = this.createStaticBuffer([
+      0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1,
+    ]);
   }
 
-  createShader(gl: WebGLRenderingContext, type: number, source: string) {
+  createStaticBuffer(array: number[]) {
+    const buffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
+    this.gl.bufferData(
+      this.gl.ARRAY_BUFFER,
+      new Float32Array(array),
+      this.gl.STATIC_DRAW
+    );
+    return buffer;
+  }
+
+  createShader(type: number, source: string) {
+    const gl = this.gl;
+
     var shader = gl.createShader(type);
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+
     if (success) {
       return shader;
     }
@@ -98,14 +101,18 @@ class Renderer {
     gl.deleteShader(shader);
   }
 
-  createProgram(
-    gl: WebGLRenderingContext,
-    vertexShader: WebGLShader,
-    fragmentShader: WebGLShader
-  ) {
+  createProgram(vertShaderSrc: string, fragShaderSrc: string) {
+    const gl = this.gl;
     var program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
+
+    gl.attachShader(
+      program,
+      this.createShader(gl.VERTEX_SHADER, vertShaderSrc)
+    );
+    gl.attachShader(
+      program,
+      this.createShader(gl.FRAGMENT_SHADER, fragShaderSrc)
+    );
     gl.linkProgram(program);
     var success = gl.getProgramParameter(program, gl.LINK_STATUS);
     if (success) {
@@ -116,7 +123,7 @@ class Renderer {
     gl.deleteProgram(program);
   }
 
-  createBuffer(key: string, positions: number[], texture: Texture) {
+  createDynamicBuffers(key: string, positions: number[], texture: Texture) {
     const posBuffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, posBuffer);
     this.gl.bufferData(
@@ -132,10 +139,9 @@ class Renderer {
     };
   }
 
-  drawSprite(sprite: Sprite, buffer: string = "DEFAULT") {
-    const positions = this.buildSpriteAttributes([sprite]);
-    this.createBuffer(buffer, positions, sprite.texture);
-    this.draw(this.buffers[buffer]);
+  drawSprite(sprite: Sprite) {
+    this.batchSprites([sprite]);
+    this.draw(this.buffers.DEFAULT);
   }
 
   drawSprites(sprites: Sprite[]) {
@@ -240,43 +246,17 @@ class Renderer {
 
   batchSprites(sprites: Sprite[], key: string = "DEFAULT") {
     const positions = this.buildSpriteAttributes(sprites);
-
-    // console.log(points);
-    // this.setBuffer(points, uvs);
-    this.createBuffer(key, positions, sprites[0].texture);
-    // this.draw(); //
+    this.createDynamicBuffers(key, positions, sprites[0].texture);
   }
 
   buildSpriteAttributes(sprites: Sprite[]) {
-    let z = 0;
+    // return constPositions;
 
-    const premadePoints = [
-      // first triangle
-      0, 100, 100, 0, 0, 0,
-      // second triangle
-      0, 100, 100, 100, 100, 0,
-    ];
-
-    const premadeUvs = [
-      // first triangle
-      0, 0, 1, 1, 0, 1,
-      // second triangle
-      0, 0, 1, 0, 1, 1,
-    ];
-
-    let points: number[] = [];
-    let uvs: number[] = [];
     let positions: number[] = [];
 
     sprites.forEach((sprite) => {
-      // console.log("concat", premadePoints);
-      // points = points.concat(premadePoints);
-      // uvs = uvs.concat(premadeUvs);
-      positions.push(sprite.x);
-      positions.push(sprite.y);
+      positions.push(sprite.x, sprite.y);
     });
-
-    // console.log(points, uvs, positions);
 
     return positions;
   }
