@@ -5,6 +5,18 @@ import MySprite from "./mySprite";
 // image resources
 import image from "./images/newportrait.gif";
 import image2 from "./images/newportrait2.gif";
+import atlasURL from "./images/portrait_atlas.png";
+
+// atlas
+const atlas = {
+  texture: atlasURL,
+  width: 200,
+  height: 100,
+  rects: [
+    [0, 0, 0.5, 1],
+    [0.5, 0, 1, 1],
+  ],
+};
 
 // Load textures
 const loader = new TextureLoader(spritegl.gl, start);
@@ -26,11 +38,11 @@ function start(textures: { [url: string]: Texture }) {
         size,
         size,
         0,
-        textures.myTexture
-        // // randomly select between two textures
-        // Math.floor(Math.random() * 2) === 0
-        //   ? textures.myTexture
-        //   : textures.myTexture2
+        // textures.myTexture
+        // randomly select between two textures
+        Math.floor(Math.random() * 2) === 0
+          ? textures.myTexture
+          : textures.myTexture2
       )
     );
   }
