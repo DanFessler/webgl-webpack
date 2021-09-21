@@ -9,6 +9,7 @@ class Sprite {
   angle: number = Math.random() * Math.PI * 2;
   depth: number = 0;
   texture: Texture;
+  atlasRect: [number, number, number, number] | null;
 
   constructor(
     x: number,
@@ -16,19 +17,23 @@ class Sprite {
     width: number,
     height: number,
     depth: number = 0,
-    texture: Texture
+    texture: Texture,
+    atlasRect: [number, number, number, number]
   ) {
     this.x = x;
     this.y = y;
     this.width = width;
     this.height = height;
     this.vel = {
-      x: Math.sin(this.angle),
-      y: Math.cos(this.angle),
+      x: Math.sin(this.angle) * 6,
+      y: Math.cos(this.angle) * 6,
     };
     this.depth = depth;
     this.texture = texture;
+    this.atlasRect = atlasRect;
   }
+
+  getUvs() {}
 
   update() {}
 }

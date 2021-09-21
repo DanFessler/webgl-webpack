@@ -10,6 +10,7 @@ type bufferData = {
   posBuffer: WebGLBuffer;
   bufferLength: number;
   texture: Texture;
+  rectBuffer: WebGLBuffer;
 };
 
 type constructorTypes = {
@@ -123,28 +124,13 @@ class Renderer {
     gl.deleteProgram(program);
   }
 
-  createDynamicBuffers(key: string, positions: number[], texture: Texture) {
-    const posBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, posBuffer);
-    this.gl.bufferData(
-      this.gl.ARRAY_BUFFER,
-      new Float32Array(positions),
-      this.gl.DYNAMIC_DRAW
-    );
-
-    this.buffers[key] = {
-      posBuffer: posBuffer,
-      bufferLength: positions.length / 2,
-      texture: texture,
-    };
-  }
-
   drawSprite(sprite: Sprite) {
     this.batchSprites([sprite]);
     this.draw(this.buffers.DEFAULT);
   }
 
   drawSprites(sprites: Sprite[]) {
+    if (!sprites.length) return;
     this.batchSprites(sprites);
     this.draw(this.buffers.DEFAULT);
   }
@@ -237,7 +223,24 @@ class Renderer {
       0
     );
     ext.vertexAttribDivisorANGLE(posAttribLocation, 1);
-    // console.log(posAttribLocation, buffer.posBuffer);
+
+    const rectAttribLocation = this.gl.getAttribLocation(
+      this.shaderProgram,
+      "a_uvRect"
+    );
+
+    // bind uv rects
+    this.gl.enableVertexAttribArray(rectAttribLocation);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer.rectBuffer);
+    this.gl.vertexAttribPointer(
+      rectAttribLocation,
+      4,
+      this.gl.FLOAT,
+      false,
+      0,
+      0
+    );
+    ext.vertexAttribDivisorANGLE(rectAttribLocation, 1);
 
     // console.log(positions.length, positions.length / 2);
     // this.gl.drawArrays(this.gl.TRIANGLES, 0, buffer.bufferLength / 2);
@@ -245,20 +248,48 @@ class Renderer {
   }
 
   batchSprites(sprites: Sprite[], key: string = "DEFAULT") {
-    const positions = this.buildSpriteAttributes(sprites);
-    this.createDynamicBuffers(key, positions, sprites[0].texture);
-  }
-
-  buildSpriteAttributes(sprites: Sprite[]) {
-    // return constPositions;
-
     let positions: number[] = [];
+    let uvs: number[] = [];
 
+    // console.log(sprites[0]);
     sprites.forEach((sprite) => {
       positions.push(sprite.x, sprite.y);
+      // uvs.push(...[0, 0, 0.5, 1]);
+      uvs.push(...sprite.atlasRect);
     });
+    // console.log(uvs);
 
-    return positions;
+    this.createDynamicBuffers(key, positions, sprites[0].texture, uvs);
+  }
+
+  createDynamicBuffers(
+    key: string,
+    positions: number[],
+    texture: Texture,
+    uvs: number[]
+  ) {
+    const posBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, posBuffer);
+    this.gl.bufferData(
+      this.gl.ARRAY_BUFFER,
+      new Float32Array(positions),
+      this.gl.DYNAMIC_DRAW
+    );
+
+    const uvBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, uvBuffer);
+    this.gl.bufferData(
+      this.gl.ARRAY_BUFFER,
+      new Float32Array(uvs),
+      this.gl.DYNAMIC_DRAW
+    );
+
+    this.buffers[key] = {
+      posBuffer: posBuffer,
+      bufferLength: positions.length / 2,
+      texture: texture,
+      rectBuffer: uvBuffer,
+    };
   }
 }
 

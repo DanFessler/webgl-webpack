@@ -2,18 +2,26 @@ import { Sprite, Texture } from "./spritegl";
 import spritegl from "./spriteRenderer";
 
 class MySprite extends Sprite {
+  gravity: number = 0.1;
+  name: string;
+
   constructor(
     x: number,
     y: number,
     width: number,
     height: number,
     depth: number = 0,
-    texture: Texture
+    texture: Texture,
+    atlasRect: [number, number, number, number] = null,
+    name?: string
   ) {
-    super(x, y, width, height, depth, texture);
+    super(x, y, width, height, depth, texture, atlasRect);
+    // console.log(atlasRect);
+    this.name = name;
   }
 
   update() {
+    this.vel.y += this.gravity;
     this.x += this.vel.x;
     this.y += this.vel.y;
 
@@ -33,11 +41,10 @@ class MySprite extends Sprite {
       this.vel.y *= -1;
     }
     if (this.y > height) {
-      this.y = height;
-      this.vel.y *= -1;
+      this.y = height - (this.y - height);
+      // this.vel.y = -this.vel.y;
+      this.vel.y = -Math.random() * 14;
     }
-
-    // console.log("tick");
   }
 }
 
