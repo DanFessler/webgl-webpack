@@ -3,8 +3,6 @@ import { Sprite, Texture, TextureLoader } from "./spritegl";
 import MySprite from "./MySprite";
 
 // image resources
-import image from "./images/newportrait.gif";
-import image2 from "./images/newportrait2.gif";
 import atlasURL from "./images/portrait_atlas.png";
 
 type atlasType = {
@@ -27,8 +25,6 @@ const atlas: atlasType = {
 
 // Load textures
 const loader = new TextureLoader(spritegl.gl, start);
-loader.add(image, "myTexture");
-loader.add(image2, "myTexture2");
 loader.add(atlasURL, "myAtlas");
 loader.load();
 
@@ -37,26 +33,8 @@ function start(textures: { [url: string]: Texture }) {
   const size = 100;
   const sprites: Sprite[] = [];
 
-  // Randomly positioned sprites
-  // for (let i = 0; i < 100; i++) {
-  //   sprites.push(
-  //     new MySprite(
-  //       Math.random() * (spritegl.canvas.clientWidth - size),
-  //       Math.random() * (spritegl.canvas.clientHeight - size),
-  //       size,
-  //       size,
-  //       0,
-  //       textures.myAtlas,
-  //       // [0, 0, 1, 1]
-  //       Math.floor(Math.random() * 2) === 0 ? atlas.rects[0] : atlas.rects[1],
-  //       // randomly select between two textures
-  //       // Math.floor(Math.random() * 2) === 0
-  //       //   ? textures.myTexture
-  //       //   : textures.myTexture2
-  //       i + ""
-  //     )
-  //   );
-  // }
+  // add a sprite just to make sure things are working
+  addSprite();
 
   let mousedown = false;
 
@@ -79,24 +57,26 @@ function start(textures: { [url: string]: Texture }) {
     tick(t, t + 1);
   });
 
+  function addSprite() {
+    sprites.push(
+      new MySprite(
+        0,
+        0,
+        size,
+        size,
+        0,
+        textures.myAtlas,
+        Math.floor(Math.random() * 2) === 0 ? atlas.rects[0] : atlas.rects[1]
+      )
+    );
+    sprites[sprites.length - 1].angle = Math.PI / 2;
+  }
+
   function tick(thisTime: DOMHighResTimeStamp, lastTime: DOMHighResTimeStamp) {
     // add sprites on mouse down
     if (mousedown) {
       for (let i = 0; i < 100; i++) {
-        sprites.push(
-          new MySprite(
-            0,
-            0,
-            size,
-            size,
-            0,
-            textures.myAtlas,
-            Math.floor(Math.random() * 2) === 0
-              ? atlas.rects[0]
-              : atlas.rects[1]
-          )
-        );
-        sprites[sprites.length - 1].angle = Math.PI / 2;
+        addSprite();
       }
     }
 
