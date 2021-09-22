@@ -6,7 +6,6 @@ class Sprite {
   width: number = 0;
   height: number = 0;
   vel: { x: number; y: number } = { x: 0, y: 0 };
-  angle: number = Math.random() * Math.PI * 2;
   depth: number = 0;
   texture: Texture;
   atlasRect: [number, number, number, number] | null;
@@ -25,8 +24,8 @@ class Sprite {
     this.width = width;
     this.height = height;
     this.vel = {
-      x: Math.sin(this.angle) * 6,
-      y: Math.cos(this.angle) * 6,
+      x: 0,
+      y: 0,
     };
     this.depth = depth;
     this.texture = texture;

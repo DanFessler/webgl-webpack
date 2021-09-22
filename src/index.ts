@@ -37,14 +37,20 @@ function start(textures: { [url: string]: Texture }) {
   addSprite();
 
   let mousedown = false;
+  let mousepos = { x: 0, y: 0 };
 
   // initial setup
-  spritegl.canvas.addEventListener("mousedown", () => {
+  spritegl.canvas.addEventListener("mousedown", (e) => {
     mousedown = true;
+    mousepos = { x: e.clientX, y: e.clientY };
   });
 
   spritegl.canvas.addEventListener("mouseup", () => {
     mousedown = false;
+  });
+
+  spritegl.canvas.addEventListener("mousemove", (e) => {
+    mousepos = { x: e.clientX, y: e.clientY };
   });
 
   // Create batch for static draw
@@ -57,11 +63,11 @@ function start(textures: { [url: string]: Texture }) {
     tick(t, t + 1);
   });
 
-  function addSprite() {
+  function addSprite(x = 0, y = 0) {
     sprites.push(
       new MySprite(
-        0,
-        0,
+        x - size / 2,
+        y - size / 2,
         size,
         size,
         0,
@@ -69,14 +75,24 @@ function start(textures: { [url: string]: Texture }) {
         Math.floor(Math.random() * 2) === 0 ? atlas.rects[0] : atlas.rects[1]
       )
     );
-    sprites[sprites.length - 1].angle = Math.PI / 2;
+    // set initial velocity
+    let angle = Math.random() * Math.PI * 2;
+    let speed = Math.random() * 2 + 4;
+    sprites[sprites.length - 1].vel = {
+      x: Math.sin(angle) * speed,
+      y: Math.cos(angle) * speed,
+    };
   }
 
-  function tick(thisTime: DOMHighResTimeStamp, lastTime: DOMHighResTimeStamp) {
+  function tick(
+    thisTime: DOMHighResTimeStamp,
+    lastTime: DOMHighResTimeStamp,
+    id?: number
+  ) {
     // add sprites on mouse down
     if (mousedown) {
       for (let i = 0; i < 100; i++) {
-        addSprite();
+        addSprite(mousepos.x, mousepos.y);
       }
     }
 
@@ -99,7 +115,7 @@ function start(textures: { [url: string]: Texture }) {
 
     document.getElementById("fps").innerText =
       Math.round(smoothFPS) + "\n" + sprites.length;
-    window.requestAnimationFrame((nextTime) => tick(nextTime, thisTime));
+    window.requestAnimationFrame((nextTime) => tick(nextTime, thisTime, id));
   }
 }
 
