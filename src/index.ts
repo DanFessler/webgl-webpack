@@ -34,7 +34,9 @@ function start(textures: { [url: string]: Texture }) {
   const sprites: Sprite[] = [];
 
   // add a sprite just to make sure things are working
-  addSprite();
+  for (let i = 0; i < 70000; i++) {
+    addSprite();
+  }
 
   let mousedown = false;
   let mousepos = { x: 0, y: 0 };
@@ -63,9 +65,20 @@ function start(textures: { [url: string]: Texture }) {
     tick(t, t + 1);
   });
 
-  function addSprite(x = 0, y = 0) {
+  function addSprite(x = 100, y = 100) {
+    // sprites.push(
+    //   new MySprite(
+    //     x - size / 2,
+    //     y - size / 2,
+    //     size,
+    //     size,
+    //     0,
+    //     textures.myAtlas,
+    //     Math.floor(Math.random() * 2) === 0 ? atlas.rects[0] : atlas.rects[1]
+    //   )
+    // );
     sprites.push(
-      new MySprite(
+      spritegl.createSprite(
         x - size / 2,
         y - size / 2,
         size,
@@ -75,6 +88,7 @@ function start(textures: { [url: string]: Texture }) {
         Math.floor(Math.random() * 2) === 0 ? atlas.rects[0] : atlas.rects[1]
       )
     );
+
     // set initial velocity
     let angle = Math.random() * Math.PI * 2;
     let speed = Math.random() * 2 + 4;

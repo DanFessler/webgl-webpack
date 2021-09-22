@@ -27,6 +27,8 @@ class Renderer {
   uvBuffer: WebGLBuffer;
   material: Material;
 
+  spritePositionBuffer: Float32Array = new Float32Array();
+
   buffers: {
     [key: string]: bufferData;
   } = {
@@ -101,6 +103,39 @@ class Renderer {
     // this.setMaterial();
   }
 
+  createSprite(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    depth: number = 0,
+    texture: Texture,
+    atlasRect: [number, number, number, number]
+  ) {
+    const index = this.spritePositionBuffer.length;
+
+    // TODO:
+    // creating new float32 array is expensive!
+
+    const newBuffer = new Float32Array(this.spritePositionBuffer.length + 2);
+    // console.log(this.spritePositionBuffer);
+    newBuffer.set(this.spritePositionBuffer);
+    newBuffer.set([x, y], index);
+    this.spritePositionBuffer = newBuffer;
+
+    return new Sprite(
+      x,
+      y,
+      width,
+      height,
+      depth,
+      texture,
+      atlasRect,
+      this,
+      index
+    );
+  }
+
   setMaterial() {
     // create shader program
     // this.shaderProgram = this.createProgram(vertShaderSrc, fragShaderSrc);
@@ -143,18 +178,20 @@ class Renderer {
   }
 
   batchSprites(sprites: Sprite[], key: string = "DEFAULT") {
-    let positions: number[] = [];
+    // let positions: number[] = [];
     let uvs: number[] = [];
 
-    // console.log(sprites[0]);
     sprites.forEach((sprite) => {
-      positions.push(sprite.x, sprite.y);
-      // uvs.push(...[0, 0, 0.5, 1]);
+      // positions.push(sprite.x, sprite.y);
       uvs.push(...sprite.atlasRect);
     });
-    // console.log(uvs);
 
-    this.createDynamicBuffers(key, positions, sprites[0].texture, uvs);
+    this.createDynamicBuffers(
+      key,
+      this.spritePositionBuffer,
+      sprites[0].texture,
+      uvs
+    );
   }
 
   createStaticBuffer(array: number[]) {
@@ -170,17 +207,13 @@ class Renderer {
 
   createDynamicBuffers(
     key: string,
-    positions: number[],
+    positions: Float32Array,
     texture: Texture,
     uvs: number[]
   ) {
     const posBuffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, posBuffer);
-    this.gl.bufferData(
-      this.gl.ARRAY_BUFFER,
-      new Float32Array(positions),
-      this.gl.DYNAMIC_DRAW
-    );
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.DYNAMIC_DRAW);
 
     const uvBuffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, uvBuffer);

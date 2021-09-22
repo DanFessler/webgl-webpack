@@ -1,9 +1,8 @@
-import { Sprite, Texture } from "./spritegl";
+import { Renderer, Sprite, Texture } from "./spritegl";
 import spritegl from "./spriteRenderer";
 
 class MySprite extends Sprite {
   gravity: number = 0.1;
-  name: string;
 
   constructor(
     x: number,
@@ -13,38 +12,42 @@ class MySprite extends Sprite {
     depth: number = 0,
     texture: Texture,
     atlasRect: [number, number, number, number] = null,
-    name?: string
+    renderer: Renderer,
+    index: number
   ) {
-    super(x, y, width, height, depth, texture, atlasRect);
+    super(x, y, width, height, depth, texture, atlasRect, renderer, index);
     // console.log(atlasRect);
-    this.name = name;
   }
 
   update() {
+    let { x, y } = this.getPosition();
+
     this.vel.y += this.gravity;
-    this.x += this.vel.x;
-    this.y += this.vel.y;
+    x += this.vel.x;
+    y += this.vel.y;
 
     const width = spritegl.canvas.width - this.width;
     const height = spritegl.canvas.height - this.height;
 
-    if (this.x < 0) {
-      this.x = 0;
+    if (x < 0) {
+      x = 0;
       this.vel.x *= -1;
     }
-    if (this.x > width) {
-      this.x = width;
+    if (x > width) {
+      x = width;
       this.vel.x *= -1;
     }
-    if (this.y < 0) {
-      this.y = 0;
+    if (y < 0) {
+      y = 0;
       this.vel.y *= -1;
     }
-    if (this.y > height) {
-      this.y = height - (this.y - height);
+    if (y > height) {
+      y = height - (y - height);
       // this.vel.y = -this.vel.y;
       this.vel.y = -Math.random() * 14;
     }
+
+    this.setPosition(x, y);
   }
 }
 
