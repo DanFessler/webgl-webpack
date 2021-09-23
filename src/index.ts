@@ -5,6 +5,8 @@ import MySprite from "./MySprite";
 // image resources
 import atlasURL from "./images/portrait_atlas.png";
 
+const SPRITECOUNT = 500000;
+
 type atlasType = {
   texture: string;
   width: number;
@@ -34,8 +36,8 @@ function start(textures: { [url: string]: Texture }) {
   const sprites: Sprite[] = [];
 
   // add a sprite just to make sure things are working
-  for (let i = 0; i < 70000; i++) {
-    addSprite();
+  for (let i = 0; i < SPRITECOUNT; i++) {
+    addSprite(Math.random() * 1000, Math.random() * 1000);
   }
 
   let mousedown = false;
@@ -56,7 +58,7 @@ function start(textures: { [url: string]: Texture }) {
   });
 
   // Create batch for static draw
-  // spritegl.batchSprites(sprites, "TEST");
+  spritegl.batchSprites(sprites, "TEST");
 
   const smoothing = 0.02;
   let smoothFPS = 60;
@@ -65,20 +67,9 @@ function start(textures: { [url: string]: Texture }) {
     tick(t, t + 1);
   });
 
-  function addSprite(x = 100, y = 100) {
-    // sprites.push(
-    //   new MySprite(
-    //     x - size / 2,
-    //     y - size / 2,
-    //     size,
-    //     size,
-    //     0,
-    //     textures.myAtlas,
-    //     Math.floor(Math.random() * 2) === 0 ? atlas.rects[0] : atlas.rects[1]
-    //   )
-    // );
+  function addSprite(x = 0, y = 0) {
     sprites.push(
-      spritegl.createSprite(
+      new MySprite(
         x - size / 2,
         y - size / 2,
         size,
@@ -111,15 +102,15 @@ function start(textures: { [url: string]: Texture }) {
     }
 
     // sprite update
-    sprites.forEach((sprite) => {
-      sprite.update();
-    });
+    // sprites.forEach((sprite) => {
+    //   sprite.update(thisTime - lastTime);
+    // });
 
     // Static draw
-    // spritegl.draw(spritegl.buffers.TEST);
+    spritegl.draw(spritegl.buffers.TEST);
 
     // Batched draw
-    spritegl.drawSprites(sprites);
+    // spritegl.drawSprites(sprites);
 
     // Non-batched draw
     // sprites.forEach((sprite) => spritegl.drawSprite(sprite));

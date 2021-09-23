@@ -5,6 +5,8 @@ import { mat4 } from "gl-matrix";
 import Texture from "./Texture";
 import Sprite from "./Sprite";
 
+const SPRITECOUNT = 100000;
+
 type bufferData = {
   posBuffer: WebGLBuffer;
   bufferLength: number;
@@ -27,7 +29,8 @@ class Renderer {
   uvBuffer: WebGLBuffer;
   material: Material;
 
-  spritePositionBuffer: Float32Array = new Float32Array();
+  spritePositionBuffer: number[] = [];
+  spriteRectBuffer: number[] = [];
 
   buffers: {
     [key: string]: bufferData;
@@ -103,39 +106,6 @@ class Renderer {
     // this.setMaterial();
   }
 
-  createSprite(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    depth: number = 0,
-    texture: Texture,
-    atlasRect: [number, number, number, number]
-  ) {
-    const index = this.spritePositionBuffer.length;
-
-    // TODO:
-    // creating new float32 array is expensive!
-
-    const newBuffer = new Float32Array(this.spritePositionBuffer.length + 2);
-    // console.log(this.spritePositionBuffer);
-    newBuffer.set(this.spritePositionBuffer);
-    newBuffer.set([x, y], index);
-    this.spritePositionBuffer = newBuffer;
-
-    return new Sprite(
-      x,
-      y,
-      width,
-      height,
-      depth,
-      texture,
-      atlasRect,
-      this,
-      index
-    );
-  }
-
   setMaterial() {
     // create shader program
     // this.shaderProgram = this.createProgram(vertShaderSrc, fragShaderSrc);
@@ -156,7 +126,6 @@ class Renderer {
     if (!buffer) return;
 
     const ext = this.gl.getExtension("ANGLE_instanced_arrays");
-    const locations = this.material.locations;
 
     // set material texture
     this.material.setTexture(buffer.texture.glTexture);
@@ -178,20 +147,23 @@ class Renderer {
   }
 
   batchSprites(sprites: Sprite[], key: string = "DEFAULT") {
-    // let positions: number[] = [];
-    let uvs: number[] = [];
+    // let posBuffer: number[] = [];
+    // let rectBuffer: number[] = [];
+    // sprites.forEach((sprite) => {
+    //   posBuffer.push(sprite.x, sprite.y);
+    //   rectBuffer.push(...sprite.atlasRect);
+    // });
 
-    sprites.forEach((sprite) => {
-      // positions.push(sprite.x, sprite.y);
-      uvs.push(...sprite.atlasRect);
-    });
-
-    this.createDynamicBuffers(
-      key,
-      this.spritePositionBuffer,
-      sprites[0].texture,
-      uvs
+    const { posBuffer, rectBuffer } = sprites.reduce(
+      (buffers, sprite) => {
+        buffers.posBuffer.push(sprite.x, sprite.y);
+        buffers.rectBuffer.push(...sprite.atlasRect);
+        return buffers;
+      },
+      { posBuffer: [], rectBuffer: [] }
     );
+
+    this.createDynamicBuffers(key, posBuffer, sprites[0].texture, rectBuffer);
   }
 
   createStaticBuffer(array: number[]) {
@@ -207,19 +179,23 @@ class Renderer {
 
   createDynamicBuffers(
     key: string,
-    positions: Float32Array,
+    positions: number[],
     texture: Texture,
-    uvs: number[]
+    atlasRects: number[]
   ) {
     const posBuffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, posBuffer);
-    this.gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.DYNAMIC_DRAW);
+    this.gl.bufferData(
+      this.gl.ARRAY_BUFFER,
+      new Float32Array(positions),
+      this.gl.DYNAMIC_DRAW
+    );
 
     const uvBuffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, uvBuffer);
     this.gl.bufferData(
       this.gl.ARRAY_BUFFER,
-      new Float32Array(uvs),
+      new Float32Array(atlasRects),
       this.gl.DYNAMIC_DRAW
     );
 

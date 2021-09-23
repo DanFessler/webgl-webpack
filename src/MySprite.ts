@@ -11,20 +11,18 @@ class MySprite extends Sprite {
     height: number,
     depth: number = 0,
     texture: Texture,
-    atlasRect: [number, number, number, number] = null,
-    renderer: Renderer,
-    index: number
+    atlasRect: [number, number, number, number] = null
   ) {
-    super(x, y, width, height, depth, texture, atlasRect, renderer, index);
+    super(x, y, width, height, depth, texture, atlasRect);
     // console.log(atlasRect);
   }
 
-  update() {
+  update(deltatime: number) {
     let { x, y } = this.getPosition();
 
-    this.vel.y += this.gravity;
-    x += this.vel.x;
-    y += this.vel.y;
+    this.vel.y += (this.gravity * deltatime) / 20;
+    x += (this.vel.x * deltatime) / 20;
+    y += (this.vel.y * deltatime) / 20;
 
     const width = spritegl.canvas.width - this.width;
     const height = spritegl.canvas.height - this.height;
