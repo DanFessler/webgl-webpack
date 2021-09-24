@@ -8,8 +8,6 @@ class Material {
     attributes: {
       points: number;
       coords: number;
-      // position: number;
-      // rect: number;
     };
     uniforms: {
       matrix: WebGLUniformLocation;
@@ -30,8 +28,6 @@ class Material {
       attributes: {
         points: this.gl.getAttribLocation(this.shader, "a_point"),
         coords: this.gl.getAttribLocation(this.shader, "a_texCoord"),
-        // position: this.gl.getAttribLocation(this.shader, "a_position"),
-        // rect: this.gl.getAttribLocation(this.shader, "a_uvRect"),
       },
       uniforms: {
         matrix: this.gl.getUniformLocation(this.shader, "u_viewMatrix"),
@@ -40,27 +36,11 @@ class Material {
     };
     this.gl.enableVertexAttribArray(this.locations.attributes.points);
     this.gl.enableVertexAttribArray(this.locations.attributes.coords);
-    // this.gl.enableVertexAttribArray(this.locations.attributes.position);
-    // this.gl.enableVertexAttribArray(this.locations.attributes.rect);
 
     this.gl.useProgram(this.shader);
 
     const viewMatrix = mat4.create();
     this.gl.uniformMatrix4fv(this.locations.uniforms.matrix, false, viewMatrix);
-
-    // this.setAttribute(
-    //   "points",
-    //   this.createStaticBuffer([0, 100, 100, 0, 0, 0, 0, 100, 100, 100, 100, 0]),
-    //   2,
-    //   this.gl.FLOAT
-    // );
-
-    // this.setAttribute(
-    //   "coords",
-    //   this.createStaticBuffer([0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1]),
-    //   2,
-    //   this.gl.FLOAT
-    // );
   }
 
   createStaticBuffer(array: number[]) {
@@ -89,12 +69,10 @@ class Material {
     name: "points" | "coords",
     arrayBuffer: any,
     size: number,
-    type: number,
-    divisor?: number
+    type: number
   ) {
-    // this.gl.enableVertexAttribArray(this.locations.attributes[name]);
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, arrayBuffer);
-    // if (name !== "points")
+
     this.gl.vertexAttribPointer(
       this.locations.attributes[name],
       size,
@@ -103,11 +81,6 @@ class Material {
       0,
       0
     );
-
-    // if (divisor) {
-    //   const ext = this.gl.getExtension("ANGLE_instanced_arrays");
-    //   ext.vertexAttribDivisorANGLE(this.locations.attributes[name], divisor);
-    // }
   }
 
   setUniform(name: string, value: any) {}
