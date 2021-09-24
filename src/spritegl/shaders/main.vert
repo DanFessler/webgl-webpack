@@ -21,9 +21,10 @@ void main() {
 
   // gl_Position = a_point;
   // gl_Position = aMat4 * a_point;
-  // gl_Position = u_viewMatrix * floor(a_point);
-  gl_Position = u_viewMatrix * (a_point + vec4(a_position, 0, 0));
+  gl_Position = u_viewMatrix * floor(a_point);
+  // gl_Position = u_viewMatrix * (a_point + vec4(a_position, 0, 0));
 
-  v_texCoord = a_texCoord * vec2(a_uvRect.zw) + vec2(a_uvRect.xy);
+  v_texCoord = a_texCoord;
+  // v_texCoord = a_texCoord * vec2(a_uvRect.zw) + vec2(a_uvRect.xy);
   v_position = a_position;
 }

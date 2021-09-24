@@ -8,9 +8,11 @@ import Sprite from "./Sprite";
 const SPRITECOUNT = 100000;
 
 type bufferData = {
-  posBuffer: WebGLBuffer;
   bufferLength: number;
   texture: Texture;
+  pointBuffer: WebGLBuffer;
+  uvBuffer: WebGLBuffer;
+  posBuffer: WebGLBuffer;
   rectBuffer: WebGLBuffer;
 };
 
@@ -92,16 +94,6 @@ class Renderer {
     // this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
     // this.gl.enable(this.gl.DEPTH_TEST);
 
-    // Set up quad vert buffer
-    this.pointBuffer = this.createStaticBuffer([
-      0, 100, 100, 0, 0, 0, 0, 100, 100, 100, 100, 0,
-    ]);
-
-    // set up quad UV buffer
-    this.uvBuffer = this.createStaticBuffer([
-      0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1,
-    ]);
-
     this.material = new Material(this.gl, vertShaderSrc, fragShaderSrc);
     // this.setMaterial();
   }
@@ -125,25 +117,24 @@ class Renderer {
   draw(buffer: bufferData = this.buffers.DEFAULT) {
     if (!buffer) return;
 
-    const ext = this.gl.getExtension("ANGLE_instanced_arrays");
-
     // set material texture
     this.material.setTexture(buffer.texture.glTexture);
 
     // set sprite positions
-    this.material.setAttribute(
-      "position",
-      buffer.posBuffer,
-      2,
-      this.gl.FLOAT,
-      1
-    );
+    this.material.setAttribute("points", buffer.pointBuffer, 2, this.gl.FLOAT);
+
+    // set sprite positions
+    this.material.setAttribute("coords", buffer.uvBuffer, 2, this.gl.FLOAT);
+
+    // set sprite positions
+    this.material.setAttribute("position", buffer.posBuffer, 2, this.gl.FLOAT);
 
     // set sprite's atlas rects
-    this.material.setAttribute("rect", buffer.rectBuffer, 4, this.gl.FLOAT, 1);
+    this.material.setAttribute("rect", buffer.rectBuffer, 4, this.gl.FLOAT);
 
     // draw sprite instances
-    ext.drawArraysInstancedANGLE(this.gl.TRIANGLES, 0, 6, buffer.bufferLength);
+    // ext.drawArraysInstancedANGLE(this.gl.TRIANGLES, 0, 6, buffer.bufferLength);
+    this.gl.drawArrays(this.gl.TRIANGLES, 0, buffer.bufferLength);
   }
 
   batchSprites(sprites: Sprite[], key: string = "DEFAULT") {
@@ -154,16 +145,44 @@ class Renderer {
     //   rectBuffer.push(...sprite.atlasRect);
     // });
 
-    const { posBuffer, rectBuffer } = sprites.reduce(
+    const { pointBuffer, uvBuffer, posBuffer, rectBuffer } = sprites.reduce(
       (buffers, sprite) => {
+        // prettier-ignore
+        buffers.pointBuffer.push(
+          0 + sprite.x, 100 + sprite.y,
+          100 + sprite.x, 0 + sprite.y,
+          0 + sprite.x, 0 + sprite.y,
+
+          0 + sprite.x, 100 + sprite.y,
+          100 + sprite.x, 100 + sprite.y,
+          100 + sprite.x, 0 + sprite.y
+        );
+
+        // prettier-ignore
+        buffers.uvBuffer.push(
+          sprite.atlasRect[0], sprite.atlasRect[1], 
+          sprite.atlasRect[0] + sprite.atlasRect[2], sprite.atlasRect[1] + sprite.atlasRect[3], 
+          sprite.atlasRect[0], sprite.atlasRect[1] + sprite.atlasRect[3], 
+
+          sprite.atlasRect[0], sprite.atlasRect[1], 
+          sprite.atlasRect[0] + sprite.atlasRect[2],sprite.atlasRect[1], 
+          sprite.atlasRect[0] + sprite.atlasRect[2], sprite.atlasRect[1] + sprite.atlasRect[3], 
+        );
         buffers.posBuffer.push(sprite.x, sprite.y);
         buffers.rectBuffer.push(...sprite.atlasRect);
         return buffers;
       },
-      { posBuffer: [], rectBuffer: [] }
+      { pointBuffer: [], uvBuffer: [], posBuffer: [], rectBuffer: [] }
     );
 
-    this.createDynamicBuffers(key, posBuffer, sprites[0].texture, rectBuffer);
+    this.createDynamicBuffers(
+      key,
+      pointBuffer,
+      uvBuffer,
+      posBuffer,
+      sprites[0].texture,
+      rectBuffer
+    );
   }
 
   createStaticBuffer(array: number[]) {
@@ -179,18 +198,36 @@ class Renderer {
 
   createDynamicBuffers(
     key: string,
+    points: number[],
+    uvs: number[],
     positions: number[],
     texture: Texture,
     atlasRects: number[]
   ) {
     if (!this.buffers[key]) {
       this.buffers[key] = {
+        pointBuffer: this.gl.createBuffer(),
+        uvBuffer: this.gl.createBuffer(),
         posBuffer: this.gl.createBuffer(),
         rectBuffer: this.gl.createBuffer(),
         texture: null,
         bufferLength: 0,
       };
     }
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers[key].pointBuffer);
+    this.gl.bufferData(
+      this.gl.ARRAY_BUFFER,
+      new Float32Array(points),
+      this.gl.DYNAMIC_DRAW
+    );
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers[key].uvBuffer);
+    this.gl.bufferData(
+      this.gl.ARRAY_BUFFER,
+      new Float32Array(uvs),
+      this.gl.DYNAMIC_DRAW
+    );
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers[key].posBuffer);
     this.gl.bufferData(
@@ -206,8 +243,9 @@ class Renderer {
       this.gl.DYNAMIC_DRAW
     );
 
+    // console.log(points.length / 2, positions.length / 2);
     this.buffers[key].texture = texture;
-    this.buffers[key].bufferLength = positions.length / 2;
+    this.buffers[key].bufferLength = points.length / 2;
   }
 }
 

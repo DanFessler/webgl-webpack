@@ -48,19 +48,19 @@ class Material {
     const viewMatrix = mat4.create();
     this.gl.uniformMatrix4fv(this.locations.uniforms.matrix, false, viewMatrix);
 
-    this.setAttribute(
-      "points",
-      this.createStaticBuffer([0, 100, 100, 0, 0, 0, 0, 100, 100, 100, 100, 0]),
-      2,
-      this.gl.FLOAT
-    );
+    // this.setAttribute(
+    //   "points",
+    //   this.createStaticBuffer([0, 100, 100, 0, 0, 0, 0, 100, 100, 100, 100, 0]),
+    //   2,
+    //   this.gl.FLOAT
+    // );
 
-    this.setAttribute(
-      "coords",
-      this.createStaticBuffer([0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1]),
-      2,
-      this.gl.FLOAT
-    );
+    // this.setAttribute(
+    //   "coords",
+    //   this.createStaticBuffer([0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1]),
+    //   2,
+    //   this.gl.FLOAT
+    // );
   }
 
   createStaticBuffer(array: number[]) {
@@ -104,10 +104,10 @@ class Material {
       0
     );
 
-    if (divisor) {
-      const ext = this.gl.getExtension("ANGLE_instanced_arrays");
-      ext.vertexAttribDivisorANGLE(this.locations.attributes[name], divisor);
-    }
+    // if (divisor) {
+    //   const ext = this.gl.getExtension("ANGLE_instanced_arrays");
+    //   ext.vertexAttribDivisorANGLE(this.locations.attributes[name], divisor);
+    // }
   }
 
   setUniform(name: string, value: any) {}
