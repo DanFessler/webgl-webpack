@@ -183,28 +183,31 @@ class Renderer {
     texture: Texture,
     atlasRects: number[]
   ) {
-    const posBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, posBuffer);
+    if (!this.buffers[key]) {
+      this.buffers[key] = {
+        posBuffer: this.gl.createBuffer(),
+        rectBuffer: this.gl.createBuffer(),
+        texture: null,
+        bufferLength: 0,
+      };
+    }
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers[key].posBuffer);
     this.gl.bufferData(
       this.gl.ARRAY_BUFFER,
       new Float32Array(positions),
       this.gl.DYNAMIC_DRAW
     );
 
-    const uvBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, uvBuffer);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers[key].rectBuffer);
     this.gl.bufferData(
       this.gl.ARRAY_BUFFER,
       new Float32Array(atlasRects),
       this.gl.DYNAMIC_DRAW
     );
 
-    this.buffers[key] = {
-      posBuffer: posBuffer,
-      bufferLength: positions.length / 2,
-      texture: texture,
-      rectBuffer: uvBuffer,
-    };
+    this.buffers[key].texture = texture;
+    this.buffers[key].bufferLength = positions.length / 2;
   }
 }
 

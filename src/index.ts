@@ -5,7 +5,7 @@ import MySprite from "./MySprite";
 // image resources
 import atlasURL from "./images/portrait_atlas.png";
 
-const SPRITECOUNT = 500000;
+const SPRITECOUNT = 200;
 
 type atlasType = {
   texture: string;
@@ -102,15 +102,15 @@ function start(textures: { [url: string]: Texture }) {
     }
 
     // sprite update
-    // sprites.forEach((sprite) => {
-    //   sprite.update(thisTime - lastTime);
-    // });
+    sprites.forEach((sprite) => {
+      sprite.update(thisTime - lastTime);
+    });
 
     // Static draw
-    spritegl.draw(spritegl.buffers.TEST);
+    // spritegl.draw(spritegl.buffers.TEST);
 
     // Batched draw
-    // spritegl.drawSprites(sprites);
+    spritegl.drawSprites(sprites);
 
     // Non-batched draw
     // sprites.forEach((sprite) => spritegl.drawSprite(sprite));
