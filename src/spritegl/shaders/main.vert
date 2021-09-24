@@ -25,5 +25,4 @@ void main() {
   gl_Position = u_viewMatrix * (a_point + vec4(a_position, 0, 0));
 
   v_texCoord = a_texCoord * vec2(a_uvRect.zw) + vec2(a_uvRect.xy);
-  v_position = a_position;
 }

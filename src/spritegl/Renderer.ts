@@ -7,6 +7,11 @@ import Sprite from "./Sprite";
 
 const SPRITECOUNT = 100000;
 
+const POSITIONS = [...new Array(SPRITECOUNT)]
+  .map((sprite) => [Math.random() * 1000, Math.random() * 1000])
+  .flat();
+const RECTS = new Array(SPRITECOUNT).fill([0, 0, 0.5, 1]).flat();
+
 type bufferData = {
   posBuffer: WebGLBuffer;
   bufferLength: number;
@@ -41,8 +46,8 @@ class Renderer {
   constructor({ canvas, width, height, className }: constructorTypes) {
     // Set up canvas
     this.canvas = canvas ? canvas : document.createElement("canvas");
-    this.canvas.width = width || 640;
-    this.canvas.height = height || 480;
+    this.canvas.width = width || 800;
+    this.canvas.height = height || 600;
     if (className) this.canvas.className = className;
 
     // get webgl context
@@ -92,16 +97,6 @@ class Renderer {
     // this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
     // this.gl.enable(this.gl.DEPTH_TEST);
 
-    // Set up quad vert buffer
-    this.pointBuffer = this.createStaticBuffer([
-      0, 100, 100, 0, 0, 0, 0, 100, 100, 100, 100, 0,
-    ]);
-
-    // set up quad UV buffer
-    this.uvBuffer = this.createStaticBuffer([
-      0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1,
-    ]);
-
     this.material = new Material(this.gl, vertShaderSrc, fragShaderSrc);
     // this.setMaterial();
   }
@@ -147,13 +142,6 @@ class Renderer {
   }
 
   batchSprites(sprites: Sprite[], key: string = "DEFAULT") {
-    // let posBuffer: number[] = [];
-    // let rectBuffer: number[] = [];
-    // sprites.forEach((sprite) => {
-    //   posBuffer.push(sprite.x, sprite.y);
-    //   rectBuffer.push(...sprite.atlasRect);
-    // });
-
     const { posBuffer, rectBuffer } = sprites.reduce(
       (buffers, sprite) => {
         buffers.posBuffer.push(sprite.x, sprite.y);
@@ -164,6 +152,8 @@ class Renderer {
     );
 
     this.createDynamicBuffers(key, posBuffer, sprites[0].texture, rectBuffer);
+
+    // this.createDynamicBuffers(key, POSITIONS, sprites[0].texture, RECTS);
   }
 
   createStaticBuffer(array: number[]) {

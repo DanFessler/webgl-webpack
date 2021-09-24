@@ -5,7 +5,7 @@ import MySprite from "./MySprite";
 // image resources
 import atlasURL from "./images/portrait_atlas.png";
 
-const SPRITECOUNT = 60000;
+const SPRITECOUNT = 50000;
 
 type atlasType = {
   texture: string;
@@ -63,9 +63,7 @@ function start(textures: { [url: string]: Texture }) {
   const smoothing = 0.02;
   let smoothFPS = 60;
 
-  window.requestAnimationFrame((t) => {
-    tick(t, t + 1);
-  });
+  window.requestAnimationFrame(tick);
 
   function addSprite(x = 0, y = 0) {
     sprites.push(
@@ -89,11 +87,10 @@ function start(textures: { [url: string]: Texture }) {
     };
   }
 
-  function tick(
-    thisTime: DOMHighResTimeStamp,
-    lastTime: DOMHighResTimeStamp,
-    id?: number
-  ) {
+  let thisTime = performance.now();
+  let lastTime = thisTime;
+
+  function tick() {
     // add sprites on mouse down
     if (mousedown) {
       for (let i = 0; i < 100; i++) {
@@ -115,12 +112,14 @@ function start(textures: { [url: string]: Texture }) {
     // Non-batched draw
     // sprites.forEach((sprite) => spritegl.drawSprite(sprite));
 
+    lastTime = thisTime;
+    thisTime = performance.now();
     const FPS = 1 / ((thisTime - lastTime) / 1000);
     smoothFPS = FPS * smoothing + smoothFPS * (1.0 - smoothing);
 
     document.getElementById("fps").innerText =
       Math.round(smoothFPS) + "\n" + sprites.length;
-    window.requestAnimationFrame((nextTime) => tick(nextTime, thisTime, id));
+    window.requestAnimationFrame(tick);
   }
 }
 

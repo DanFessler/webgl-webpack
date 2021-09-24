@@ -1,0 +1,30 @@
+body {
+  margin: 0;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  /* background-color: blue; */
+  display: flex;
+  justify-content: stretch;
+  align-items: stretch;
+}
+
+#fps {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  color: white;
+}
+
+.CYC3DFwTrY3A_66qmmqA {
+  background-color: #222;
+  /* border: 2px solid red; */
+  width: 100vw;
+  height: 100vh;
+  -ms-interpolation-mode: nearest-neighbor;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: pixelated;
+}
+
