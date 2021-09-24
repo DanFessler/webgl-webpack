@@ -3,7 +3,7 @@
 precision mediump float;
 
 varying highp vec2 v_texCoord;
-varying highp vec2 v_position;
+// varying highp vec2 v_position;
 uniform sampler2D uSampler;
 
 void main() {

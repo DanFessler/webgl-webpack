@@ -8,8 +8,8 @@ class Material {
     attributes: {
       points: number;
       coords: number;
-      position: number;
-      rect: number;
+      // position: number;
+      // rect: number;
     };
     uniforms: {
       matrix: WebGLUniformLocation;
@@ -30,8 +30,8 @@ class Material {
       attributes: {
         points: this.gl.getAttribLocation(this.shader, "a_point"),
         coords: this.gl.getAttribLocation(this.shader, "a_texCoord"),
-        position: this.gl.getAttribLocation(this.shader, "a_position"),
-        rect: this.gl.getAttribLocation(this.shader, "a_uvRect"),
+        // position: this.gl.getAttribLocation(this.shader, "a_position"),
+        // rect: this.gl.getAttribLocation(this.shader, "a_uvRect"),
       },
       uniforms: {
         matrix: this.gl.getUniformLocation(this.shader, "u_viewMatrix"),
@@ -40,8 +40,8 @@ class Material {
     };
     this.gl.enableVertexAttribArray(this.locations.attributes.points);
     this.gl.enableVertexAttribArray(this.locations.attributes.coords);
-    this.gl.enableVertexAttribArray(this.locations.attributes.position);
-    this.gl.enableVertexAttribArray(this.locations.attributes.rect);
+    // this.gl.enableVertexAttribArray(this.locations.attributes.position);
+    // this.gl.enableVertexAttribArray(this.locations.attributes.rect);
 
     this.gl.useProgram(this.shader);
 
@@ -86,7 +86,7 @@ class Material {
   }
 
   setAttribute(
-    name: "points" | "coords" | "position" | "rect",
+    name: "points" | "coords",
     arrayBuffer: any,
     size: number,
     type: number,

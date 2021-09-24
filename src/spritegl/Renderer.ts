@@ -12,8 +12,6 @@ type bufferData = {
   texture: Texture;
   pointBuffer: WebGLBuffer;
   uvBuffer: WebGLBuffer;
-  posBuffer: WebGLBuffer;
-  rectBuffer: WebGLBuffer;
 };
 
 type constructorTypes = {
@@ -126,14 +124,7 @@ class Renderer {
     // set sprite positions
     this.material.setAttribute("coords", buffer.uvBuffer, 2, this.gl.FLOAT);
 
-    // set sprite positions
-    this.material.setAttribute("position", buffer.posBuffer, 2, this.gl.FLOAT);
-
-    // set sprite's atlas rects
-    this.material.setAttribute("rect", buffer.rectBuffer, 4, this.gl.FLOAT);
-
-    // draw sprite instances
-    // ext.drawArraysInstancedANGLE(this.gl.TRIANGLES, 0, 6, buffer.bufferLength);
+    // draw
     this.gl.drawArrays(this.gl.TRIANGLES, 0, buffer.bufferLength);
   }
 
@@ -145,9 +136,10 @@ class Renderer {
     //   rectBuffer.push(...sprite.atlasRect);
     // });
 
-    const { pointBuffer, uvBuffer, posBuffer, rectBuffer } = sprites.reduce(
+    const { pointBuffer, uvBuffer } = sprites.reduce(
       (buffers, sprite) => {
         // prettier-ignore
+        // build vert buffer
         buffers.pointBuffer.push(
           0 + sprite.x, 100 + sprite.y,
           100 + sprite.x, 0 + sprite.y,
@@ -159,6 +151,7 @@ class Renderer {
         );
 
         // prettier-ignore
+        // build uv buffer
         buffers.uvBuffer.push(
           sprite.atlasRect[0], sprite.atlasRect[1], 
           sprite.atlasRect[0] + sprite.atlasRect[2], sprite.atlasRect[1] + sprite.atlasRect[3], 
@@ -168,21 +161,12 @@ class Renderer {
           sprite.atlasRect[0] + sprite.atlasRect[2],sprite.atlasRect[1], 
           sprite.atlasRect[0] + sprite.atlasRect[2], sprite.atlasRect[1] + sprite.atlasRect[3], 
         );
-        buffers.posBuffer.push(sprite.x, sprite.y);
-        buffers.rectBuffer.push(...sprite.atlasRect);
         return buffers;
       },
-      { pointBuffer: [], uvBuffer: [], posBuffer: [], rectBuffer: [] }
+      { pointBuffer: [], uvBuffer: [] }
     );
 
-    this.createDynamicBuffers(
-      key,
-      pointBuffer,
-      uvBuffer,
-      posBuffer,
-      sprites[0].texture,
-      rectBuffer
-    );
+    this.createDynamicBuffers(key, pointBuffer, uvBuffer, sprites[0].texture);
   }
 
   createStaticBuffer(array: number[]) {
@@ -200,16 +184,12 @@ class Renderer {
     key: string,
     points: number[],
     uvs: number[],
-    positions: number[],
-    texture: Texture,
-    atlasRects: number[]
+    texture: Texture
   ) {
     if (!this.buffers[key]) {
       this.buffers[key] = {
         pointBuffer: this.gl.createBuffer(),
         uvBuffer: this.gl.createBuffer(),
-        posBuffer: this.gl.createBuffer(),
-        rectBuffer: this.gl.createBuffer(),
         texture: null,
         bufferLength: 0,
       };
@@ -226,20 +206,6 @@ class Renderer {
     this.gl.bufferData(
       this.gl.ARRAY_BUFFER,
       new Float32Array(uvs),
-      this.gl.DYNAMIC_DRAW
-    );
-
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers[key].posBuffer);
-    this.gl.bufferData(
-      this.gl.ARRAY_BUFFER,
-      new Float32Array(positions),
-      this.gl.DYNAMIC_DRAW
-    );
-
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffers[key].rectBuffer);
-    this.gl.bufferData(
-      this.gl.ARRAY_BUFFER,
-      new Float32Array(atlasRects),
       this.gl.DYNAMIC_DRAW
     );
 
