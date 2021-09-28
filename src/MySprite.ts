@@ -3,6 +3,7 @@ import spritegl from "./spriteRenderer";
 
 class MySprite extends Sprite {
   gravity: number = 0.1;
+  gl: WebGLRenderingContext;
 
   constructor(
     x: number,
@@ -11,10 +12,12 @@ class MySprite extends Sprite {
     height: number,
     depth: number = 0,
     texture: Texture,
-    atlasRect: [number, number, number, number] = null
+    atlasRect: [number, number, number, number] = null,
+    gl?: WebGLRenderingContext
   ) {
     super(x, y, width, height, depth, texture, atlasRect);
     // console.log(atlasRect);
+    this.gl = gl ? gl : spritegl.gl;
   }
 
   update(deltatime: number) {
@@ -24,8 +27,8 @@ class MySprite extends Sprite {
     x += (this.vel.x * deltatime) / 20;
     y += (this.vel.y * deltatime) / 20;
 
-    const width = spritegl.canvas.width - this.width;
-    const height = spritegl.canvas.height - this.height;
+    const width = this.gl.canvas.width - this.width;
+    const height = this.gl.canvas.height - this.height;
 
     if (x < 0) {
       x = 0;

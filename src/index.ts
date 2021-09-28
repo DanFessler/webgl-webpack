@@ -1,4 +1,4 @@
-import spritegl from "./spriteRenderer";
+import renderer from "./spriteRenderer";
 import { Sprite, Texture, TextureLoader } from "./spritegl";
 import MySprite from "./MySprite";
 
@@ -26,7 +26,7 @@ const atlas: atlasType = {
 };
 
 // Load textures
-const loader = new TextureLoader(spritegl.gl, start);
+const loader = new TextureLoader(renderer.gl, start);
 loader.add(atlasURL, "myAtlas");
 loader.load();
 
@@ -44,21 +44,21 @@ function start(textures: { [url: string]: Texture }) {
   let mousepos = { x: 0, y: 0 };
 
   // initial setup
-  spritegl.canvas.addEventListener("mousedown", (e) => {
+  renderer.canvas.addEventListener("mousedown", (e) => {
     mousedown = true;
     mousepos = { x: e.clientX, y: e.clientY };
   });
 
-  spritegl.canvas.addEventListener("mouseup", () => {
+  renderer.canvas.addEventListener("mouseup", () => {
     mousedown = false;
   });
 
-  spritegl.canvas.addEventListener("mousemove", (e) => {
+  renderer.canvas.addEventListener("mousemove", (e) => {
     mousepos = { x: e.clientX, y: e.clientY };
   });
 
   // Create batch for static draw
-  spritegl.batchSprites(sprites, "TEST");
+  renderer.batchSprites(sprites, "TEST");
 
   const smoothing = 0.02;
   let smoothFPS = 60;
@@ -107,7 +107,7 @@ function start(textures: { [url: string]: Texture }) {
     // spritegl.draw(spritegl.buffers.TEST);
 
     // Batched draw
-    spritegl.drawSprites(sprites);
+    renderer.drawSprites(sprites);
 
     // Non-batched draw
     // sprites.forEach((sprite) => spritegl.drawSprite(sprite));
@@ -124,4 +124,4 @@ function start(textures: { [url: string]: Texture }) {
 }
 
 // append canvas to document
-document.getElementById("root").appendChild(spritegl.canvas);
+document.getElementById("root").appendChild(renderer.canvas);

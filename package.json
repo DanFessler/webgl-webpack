@@ -33,6 +33,7 @@
     "webpack-dev-server": "^4.1.1"
   },
   "dependencies": {
-    "gl-matrix": "^3.3.0"
+    "gl-matrix": "^3.3.0",
+    "twgl.js": "^4.21.2"
   }
 }

@@ -101,23 +101,18 @@ class Renderer {
     // this.setMaterial();
   }
 
-  setMaterial() {
-    // create shader program
-    // this.shaderProgram = this.createProgram(vertShaderSrc, fragShaderSrc);
-  }
-
   drawSprite(sprite: Sprite) {
     this.batchSprites([sprite]);
-    this.draw(this.buffers.DEFAULT);
+    this.drawBuffer(this.buffers.DEFAULT);
   }
 
   drawSprites(sprites: Sprite[]) {
     if (!sprites.length) return;
     this.batchSprites(sprites);
-    this.draw(this.buffers.DEFAULT);
+    this.drawBuffer(this.buffers.DEFAULT);
   }
 
-  draw(buffer: bufferData = this.buffers.DEFAULT) {
+  drawBuffer(buffer: bufferData = this.buffers.DEFAULT) {
     if (!buffer) return;
 
     const ext = this.gl.getExtension("ANGLE_instanced_arrays");
@@ -198,6 +193,23 @@ class Renderer {
 
     this.buffers[key].texture = texture;
     this.buffers[key].bufferLength = positions.length / 2;
+  }
+
+  // immediate mode experiment
+  begin(blendMode: number, Matrix: any) {}
+  draw(
+    texture: Texture,
+    dstRect: any,
+    srcRect: any,
+    color: any,
+    rotation: any,
+    effects: any,
+    depth: any
+  ) {}
+  endBatch(...rest: any) {}
+  setMaterial(...rest: any) {
+    // create shader program
+    // this.shaderProgram = this.createProgram(vertShaderSrc, fragShaderSrc);
   }
 }
 
