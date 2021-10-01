@@ -4,7 +4,7 @@
     "noImplicitAny": true,
     "module": "ESNext",
     "target": "ES5",
-    "allowJs": true,
+    // "allowJs": true,
     "moduleResolution": "Node"
   },
   "include": ["src/**/*", ".d.ts"],

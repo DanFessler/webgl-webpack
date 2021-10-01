@@ -1,6 +1,8 @@
 import Texture from "./Texture";
 import Renderer from "./Renderer";
 
+type vec4 = [number, number, number, number];
+
 class Sprite {
   x: number = 0;
   y: number = 0;
@@ -9,10 +11,11 @@ class Sprite {
   vel: { x: number; y: number } = { x: 0, y: 0 };
   depth: number = 0;
   texture: Texture;
-  atlasRect: [number, number, number, number] | null;
+  atlasRect: vec4 | null;
   renderer: Renderer;
   index: number;
   gravity: number = 0.1;
+  color: vec4;
 
   constructor(
     x: number,
@@ -21,7 +24,8 @@ class Sprite {
     height: number,
     depth: number = 0,
     texture: Texture,
-    atlasRect: [number, number, number, number]
+    atlasRect: vec4,
+    color: vec4 = [1, 1, 1, 1]
   ) {
     this.x = x;
     this.y = y;
@@ -34,6 +38,7 @@ class Sprite {
     this.depth = depth;
     this.texture = texture;
     this.atlasRect = atlasRect;
+    this.color = color;
   }
 
   getPosition() {

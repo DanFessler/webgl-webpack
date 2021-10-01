@@ -1,6 +1,8 @@
 import { Renderer, Sprite, Texture } from "./spritegl";
 import spritegl from "./spriteRenderer";
 
+type vec4 = [number, number, number, number];
+
 class MySprite extends Sprite {
   gravity: number = 0.1;
   gl: WebGLRenderingContext;
@@ -12,10 +14,11 @@ class MySprite extends Sprite {
     height: number,
     depth: number = 0,
     texture: Texture,
-    atlasRect: [number, number, number, number] = null,
-    gl?: WebGLRenderingContext
+    atlasRect: vec4 = null,
+    gl?: WebGLRenderingContext,
+    color: vec4 = [1, 1, 1, 1]
   ) {
-    super(x, y, width, height, depth, texture, atlasRect);
+    super(x, y, width, height, depth, texture, atlasRect, color);
     // console.log(atlasRect);
     this.gl = gl ? gl : spritegl.gl;
   }
@@ -23,9 +26,9 @@ class MySprite extends Sprite {
   update(deltatime: number) {
     let { x, y } = this.getPosition();
 
-    this.vel.y += (this.gravity * deltatime) / 20;
-    x += (this.vel.x * deltatime) / 20;
-    y += (this.vel.y * deltatime) / 20;
+    this.vel.y += this.gravity;
+    x += this.vel.x;
+    y += this.vel.y;
 
     const width = this.gl.canvas.width - this.width;
     const height = this.gl.canvas.height - this.height;
