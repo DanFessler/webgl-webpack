@@ -12,7 +12,7 @@ import atlasURL from "./images/portrait_atlas.png";
 
 type vec4 = [number, number, number, number];
 
-const SPRITECOUNT = 2;
+const SPRITECOUNT = 4000;
 
 // Run Engine
 function start() {
@@ -120,9 +120,9 @@ function start() {
     }
 
     // sprite update
-    sprites.forEach((sprite) => {
-      sprite.update(thisTime - lastTime);
-    });
+    for (let i = 0; i < sprites.length; i++) {
+      sprites[i].update(thisTime - lastTime);
+    }
   }
 
   function draw() {
@@ -152,7 +152,7 @@ function start() {
     smoothFPS = FPS * fpsSmoothing + smoothFPS * (1.0 - fpsSmoothing);
 
     document.getElementById("fps").innerText =
-      Math.round(smoothFPS) + "\n" + sprites.length;
+      Math.round(FPS) + "\n" + Math.round(smoothFPS) + "\n" + sprites.length;
   }
 
   function addSprite(x = 0, y = 0, color: vec4 = [1, 1, 1, 1]) {

@@ -23,35 +23,31 @@ class MySprite extends Sprite {
     this.gl = gl ? gl : spritegl.gl;
   }
 
-  update(deltatime: number) {
-    let { x, y } = this.getPosition();
-
+  update() {
     this.vel.y += this.gravity;
-    x += this.vel.x;
-    y += this.vel.y;
+    this.x += this.vel.x;
+    this.y += this.vel.y;
 
     const width = this.gl.canvas.width - this.width;
     const height = this.gl.canvas.height - this.height;
 
-    if (x < 0) {
-      x = 0;
+    if (this.x < 0) {
+      this.x = 0;
       this.vel.x *= -1;
     }
-    if (x > width) {
-      x = width;
+    if (this.x > width) {
+      this.x = width;
       this.vel.x *= -1;
     }
-    if (y < 0) {
-      y = 0;
+    if (this.y < 0) {
+      this.y = 0;
       this.vel.y *= -1;
     }
-    if (y > height) {
-      y = height - (y - height);
+    if (this.y > height) {
+      this.y = height - (this.y - height);
       // this.vel.y = -this.vel.y;
       this.vel.y = -Math.random() * 14;
     }
-
-    this.setPosition(x, y);
   }
 }
 
