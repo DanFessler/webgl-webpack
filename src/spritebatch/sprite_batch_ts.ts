@@ -3,10 +3,12 @@ import { createProgramFromSources, m4 } from "twgl.js";
 import fragmentShader from "./sprite_batch.frag";
 import vertexShader from "./sprite_batch.vert";
 
-const componentCount = 8;
+const componentCount = 15;
 const maxSpriteCount = 1024;
 const fullTextureRegion: vec4 = [0, 0, 1, 1];
 
+// type vec2 = [number, number];
+// type vec3 = [number, number, number];
 type vec4 = [number, number, number, number];
 type sprite = {
   color: vec4;
@@ -18,14 +20,26 @@ type sprite = {
   region: vec4;
 };
 
+type attributes = {
+  index: number;
+  position: number;
+  size: number;
+  angle: number;
+  region: number;
+  color: number;
+  effect: number;
+};
+
 class SpriteBatch {
   gl: WebGLRenderingContext;
   program: WebGLProgram;
   uniforms: any;
-  attributes: any;
+  attributes: attributes;
   buffer: WebGLBuffer;
+  staticBuffer: WebGLBuffer;
   projView: m4.Mat4;
   bufferData: Float32Array;
+  staticBufferData: Float32Array;
   spriteCounter: number;
   sprites: sprite[];
   color: vec4;
@@ -36,8 +50,9 @@ class SpriteBatch {
     gl: WebGLRenderingContext,
     program: WebGLProgram,
     uniforms: any,
-    attributes: any,
+    attributes: attributes,
     buffer: WebGLBuffer,
+    staticBuffer: WebGLBuffer,
     projView: m4.Mat4
   ) {
     this.gl = gl;
@@ -45,9 +60,11 @@ class SpriteBatch {
     this.uniforms = uniforms;
     this.attributes = attributes;
     this.buffer = buffer;
-    this.bufferData = new Float32Array(
-      componentCount * maxSpriteCount * 6
-    ).fill(1);
+    this.staticBuffer = staticBuffer;
+    this.bufferData = new Float32Array(componentCount * maxSpriteCount).fill(1);
+    this.staticBufferData = new Float32Array(
+      [...new Array(maxSpriteCount)].map((sprite) => [0, 1, 2, 1, 2, 3]).flat()
+    );
     this.spriteCounter = 0;
     this.sprites = [];
     this.color = [1, 1, 1, 1];
@@ -55,15 +72,19 @@ class SpriteBatch {
   }
 
   begin() {
-    const { gl } = this;
+    const { gl, attributes } = this;
     this.spriteCounter = 0;
     this.isRendering = true;
     this.drawCallCount = 0;
 
     gl.useProgram(this.program);
-    gl.enableVertexAttribArray(this.attributes.color);
-    gl.enableVertexAttribArray(this.attributes.position);
-    gl.enableVertexAttribArray(this.attributes.texCoord);
+    gl.enableVertexAttribArray(attributes.index);
+    gl.enableVertexAttribArray(attributes.position);
+    gl.enableVertexAttribArray(attributes.size);
+    gl.enableVertexAttribArray(attributes.angle);
+    gl.enableVertexAttribArray(attributes.region);
+    gl.enableVertexAttribArray(attributes.color);
+    gl.enableVertexAttribArray(attributes.effect);
   }
 
   end() {
@@ -73,100 +94,139 @@ class SpriteBatch {
 
     // console.log(this.drawCallCount);
 
-    gl.disableVertexAttribArray(attributes.color);
+    gl.disableVertexAttribArray(attributes.index);
     gl.disableVertexAttribArray(attributes.position);
-    gl.disableVertexAttribArray(attributes.texCoord);
+    gl.disableVertexAttribArray(attributes.size);
+    gl.disableVertexAttribArray(attributes.angle);
+    gl.disableVertexAttribArray(attributes.region);
+    gl.disableVertexAttribArray(attributes.color);
+    gl.disableVertexAttribArray(attributes.effect);
   }
 
   flush() {
     if (this.sprites.length > 0) {
       const { gl, bufferData } = this;
+      const ext = gl.getExtension("ANGLE_instanced_arrays");
 
       this.drawCallCount += 1;
 
       const error = gl.getError();
       if (error !== gl.NO_ERROR) {
-        // throw new Error(error);
+        throw new Error("GLERROR " + error);
       }
 
-      for (let i = 0; i < this.spriteCounter; i += 1) {
-        const index = i * componentCount * 6;
-        let offset = 0;
+      this.sprites.forEach((sprite, i) => {
+        const index = i * componentCount;
 
-        const applyVertex = (
-          sprite: sprite,
-          x: number,
-          y: number,
-          tx: number,
-          ty: number
-        ) => {
-          const finalIndex = index + offset * componentCount;
-          bufferData[finalIndex] = x;
-          bufferData[finalIndex + 1] = y;
-          bufferData[finalIndex + 2] = tx;
-          bufferData[finalIndex + 3] = ty;
-          [
-            bufferData[finalIndex + 4],
-            bufferData[finalIndex + 5],
-            bufferData[finalIndex + 6],
-            bufferData[finalIndex + 7],
-          ] = sprite.color;
-          offset += 1;
-        };
+        bufferData[index] = sprite.x;
+        bufferData[index + 1] = sprite.y;
+        bufferData[index + 2] = 1; //z
+        bufferData[index + 3] = sprite.width;
+        bufferData[index + 4] = sprite.height;
+        bufferData[index + 5] = 1; //angle
 
-        const sprite = this.sprites[i];
-        const x0 = sprite.x;
-        const x1 = sprite.x + sprite.width;
-        const y0 = sprite.y;
-        const y1 = sprite.y + sprite.height;
-        const [tx0, ty0, tx1, ty1] = sprite.region;
-        applyVertex(sprite, x0, y0, tx0, ty0);
-        applyVertex(sprite, x1, y0, tx1, ty0);
-        applyVertex(sprite, x0, y1, tx0, ty1);
-        applyVertex(sprite, x0, y1, tx0, ty1);
-        applyVertex(sprite, x1, y1, tx1, ty1);
-        applyVertex(sprite, x1, y0, tx1, ty0);
-      }
+        [
+          bufferData[index + 6],
+          bufferData[index + 7],
+          bufferData[index + 8],
+          bufferData[index + 9],
+        ] = sprite.region;
+        // console.log(sprite.region);
+
+        [
+          bufferData[index + 10],
+          bufferData[index + 11],
+          bufferData[index + 12],
+          bufferData[index + 13],
+        ] = sprite.color;
+
+        bufferData[index + 14] = 0; //effect
+      });
 
       const bufferWindow = this.bufferData.subarray(
         0,
-        this.spriteCounter * componentCount * 6
+        this.spriteCounter * componentCount
       );
       // console.log(bufferWindow);
 
       gl.bindTexture(gl.TEXTURE_2D, this.sprites[0].texture);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, this.staticBufferData, gl.STATIC_DRAW);
+      gl.vertexAttribPointer(this.attributes.index, 1, gl.FLOAT, false, 0, 0);
+      ext.vertexAttribDivisorANGLE(this.attributes.index, 0);
+
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
       gl.bufferData(gl.ARRAY_BUFFER, bufferWindow, gl.DYNAMIC_DRAW);
 
       const stride = 4 * componentCount;
       gl.vertexAttribPointer(
         this.attributes.position,
-        2,
+        3,
         gl.FLOAT,
         false,
         stride,
         0 * 4
       );
+      ext.vertexAttribDivisorANGLE(this.attributes.position, 1);
+
       gl.vertexAttribPointer(
-        this.attributes.texCoord,
+        this.attributes.size,
         2,
         gl.FLOAT,
         false,
         stride,
-        2 * 4
+        3 * 4
       );
+      ext.vertexAttribDivisorANGLE(this.attributes.size, 1);
+
+      gl.vertexAttribPointer(
+        this.attributes.angle,
+        1,
+        gl.FLOAT,
+        false,
+        stride,
+        5 * 4
+      );
+      ext.vertexAttribDivisorANGLE(this.attributes.angle, 1);
+
+      gl.vertexAttribPointer(
+        this.attributes.region,
+        4,
+        gl.FLOAT,
+        false,
+        stride,
+        6 * 4
+      );
+      ext.vertexAttribDivisorANGLE(this.attributes.region, 1);
+
       gl.vertexAttribPointer(
         this.attributes.color,
         4,
         gl.FLOAT,
         false,
         stride,
-        4 * 4
+        10 * 4
       );
+      ext.vertexAttribDivisorANGLE(this.attributes.color, 1);
+
+      gl.vertexAttribPointer(
+        this.attributes.effect,
+        1,
+        gl.FLOAT,
+        false,
+        stride,
+        14 * 4
+      );
+      ext.vertexAttribDivisorANGLE(this.attributes.effect, 1);
+
       gl.uniformMatrix4fv(this.uniforms.projView, false, this.projView);
-      gl.drawArrays(gl.TRIANGLES, 0, 6 * this.spriteCounter);
+
+      ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, this.spriteCounter);
+      // gl.drawArrays(gl.TRIANGLES, 0, 6 * this.spriteCounter);
 
       this.spriteCounter = 0;
+      this.sprites = [];
     }
   }
 
@@ -236,29 +296,37 @@ function createSpriteBatch(
   width = 640,
   height = 480
 ) {
+  console.log("max", gl.getParameter(gl.MAX_VERTEX_ATTRIBS));
   const program = createProgramFromSources(gl, [vertexShader, fragmentShader]);
   const uniforms = {
     projView: gl.getUniformLocation(program, "u_projView"),
     texture: gl.getUniformLocation(program, "u_texture"),
   };
 
-  const attributes = {
-    color: gl.getAttribLocation(program, "color"),
+  const attributes: attributes = {
+    index: gl.getAttribLocation(program, "index"),
     position: gl.getAttribLocation(program, "position"),
-    texCoord: gl.getAttribLocation(program, "texCoord"),
+    size: gl.getAttribLocation(program, "size"),
+    angle: gl.getAttribLocation(program, "angle"),
+    region: gl.getAttribLocation(program, "region"),
+    color: gl.getAttribLocation(program, "color"),
+    effect: gl.getAttribLocation(program, "effect"),
   };
 
   const buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    maxSpriteCount * componentCount,
-    gl.STREAM_DRAW
-  );
+  const staticBuffer = gl.createBuffer();
 
   const projView = m4.ortho(0, width, height, 0, 0, 1);
 
-  return new SpriteBatch(gl, program, uniforms, attributes, buffer, projView);
+  return new SpriteBatch(
+    gl,
+    program,
+    uniforms,
+    attributes,
+    buffer,
+    staticBuffer,
+    projView
+  );
 }
 
 export { createSpriteBatch, SpriteBatch };
