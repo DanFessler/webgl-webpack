@@ -136,8 +136,8 @@ function start() {
         myTexture,
         sprite.x,
         sprite.y,
-        100,
-        100,
+        sprite.width,
+        sprite.height,
         sprite.atlasRect,
         sprite.color
       );
