@@ -5,7 +5,7 @@ import MySprite from "./MySprite";
 // image resources
 import atlasURL from "./images/portrait_atlas.png";
 
-const SPRITECOUNT = 60000;
+const SPRITECOUNT = 40000;
 
 type atlasType = {
   texture: string;
