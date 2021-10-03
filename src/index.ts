@@ -12,7 +12,7 @@ import atlasURL from "./images/portrait_atlas.png";
 
 type vec4 = [number, number, number, number];
 
-const SPRITECOUNT = 4000;
+const SPRITECOUNT = 40000;
 
 // Run Engine
 function start() {
