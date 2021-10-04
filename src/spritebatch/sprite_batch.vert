@@ -11,8 +11,13 @@ attribute float effect;
 varying vec4 v_color;
 varying vec2 v_texCoord;
 
-
-
+vec2 rotate(vec2 v, float a) {
+	float s = sin(a);
+	float c = cos(a);
+	mat2 m = mat2(c, s, -s, c);
+	return (m * (v - 0.5)) + 0.5;
+  // return v;
+}
 
 void main() {
     angle;
@@ -39,6 +44,7 @@ void main() {
       point = vec2( 1.0, 1.0 );
       uv = vec2(region.z, region.w);
     }
+    point = rotate(point, angle);
     
     v_color = color;
     v_texCoord = uv;

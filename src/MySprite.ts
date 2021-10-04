@@ -6,6 +6,7 @@ type vec4 = [number, number, number, number];
 class MySprite extends Sprite {
   gravity: number = 0.1;
   gl: WebGLRenderingContext;
+  rVel = (Math.random() - 0.5) / 10;
 
   constructor(
     x: number,
@@ -47,7 +48,10 @@ class MySprite extends Sprite {
       this.y = height - (this.y - height);
       // this.vel.y = -this.vel.y;
       this.vel.y = -Math.random() * 14;
+      this.rVel = (Math.random() - 0.5) / 10;
     }
+
+    this.angle += this.rVel;
   }
 }
 

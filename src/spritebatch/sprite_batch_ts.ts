@@ -4,7 +4,7 @@ import fragmentShader from "./sprite_batch.frag";
 import vertexShader from "./sprite_batch.vert";
 
 const componentCount = 15;
-const maxSpriteCount = 1024;
+const maxSpriteCount = 100000;
 const fullTextureRegion: vec4 = [0, 0, 1, 1];
 
 // type vec2 = [number, number];
@@ -18,6 +18,7 @@ type sprite = {
   width: number;
   height: number;
   region: vec4;
+  angle: number;
 };
 
 type attributes = {
@@ -123,7 +124,7 @@ class SpriteBatch {
         bufferData[index + 2] = 1; //z
         bufferData[index + 3] = sprite.width;
         bufferData[index + 4] = sprite.height;
-        bufferData[index + 5] = 1; //angle
+        bufferData[index + 5] = sprite.angle; //angle
 
         [
           bufferData[index + 6],
@@ -237,7 +238,8 @@ class SpriteBatch {
     width: number,
     height: number,
     region: vec4,
-    color = this.color
+    color = this.color,
+    angle: number = 0
   ) {
     if (!this.isRendering) {
       throw new Error("Call SpriteBatch.begin before beginning to render.");
@@ -257,6 +259,7 @@ class SpriteBatch {
         width,
         height,
         region,
+        angle,
       });
     } else {
       const sprite = this.sprites[this.spriteCounter];
@@ -267,6 +270,7 @@ class SpriteBatch {
       sprite.width = width;
       sprite.height = height;
       sprite.region = region;
+      sprite.angle = angle;
     }
 
     this.spriteCounter += 1;

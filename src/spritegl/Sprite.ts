@@ -16,6 +16,7 @@ class Sprite {
   index: number;
   gravity: number = 0.1;
   color: vec4;
+  angle: number = 0.0;
 
   constructor(
     x: number,
